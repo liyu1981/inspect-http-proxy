@@ -129,8 +129,10 @@ export default function SettingsPage() {
     <AppContainer>
       <AppHeader>
         <div className="flex items-center justify-between w-full">
-          					<h1 className="text-xl font-bold tracking-tight text-primary">System Settings</h1>
-          
+          <h1 className="text-xl font-bold tracking-tight text-primary">
+            System Settings
+          </h1>
+
           {!loading && !error && (
             <Button
               onClick={handleSave}

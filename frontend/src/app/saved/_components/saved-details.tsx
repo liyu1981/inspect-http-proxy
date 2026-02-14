@@ -2,7 +2,15 @@
 
 import { format } from "date-fns";
 import { useSetAtom } from "jotai";
-import { Check, Clock, Copy, Loader2, Send } from "lucide-react";
+import {
+  Check,
+  Clock,
+  Copy,
+  FileText,
+  Loader2,
+  Logs,
+  Send,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import { useDebounced } from "@/app/_hooks/use-debounced";
@@ -313,8 +321,14 @@ function SavedSessionInfo({ bookmark }: { bookmark: ProxyBookmark }) {
           <div className="px-4 py-2 bg-background shrink-0">
             <TabsList className="h-12">
               <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="response">Response</TabsTrigger>
-              <TabsTrigger value="request">Request</TabsTrigger>
+              <TabsTrigger value="response" className="flex items-center gap-2">
+                <Logs className="h-3.5 w-3.5" />
+                Response
+              </TabsTrigger>
+              <TabsTrigger value="request" className="flex items-center gap-2">
+                <FileText className="h-3.5 w-3.5" />
+                Request
+              </TabsTrigger>
               <TabsTrigger value="environment">Environment</TabsTrigger>
             </TabsList>
           </div>

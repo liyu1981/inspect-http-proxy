@@ -8,6 +8,8 @@ import {
   Check,
   Clock,
   Copy,
+  FileText,
+  Logs,
   Send,
 } from "lucide-react";
 import { useState } from "react";
@@ -299,8 +301,14 @@ export function SessionDetails({ id }: SessionDetailsProps) {
         >
           <div className="px-6 bg-background">
             <TabsList>
-              <TabsTrigger value="response">Response</TabsTrigger>
-              <TabsTrigger value="request">Request</TabsTrigger>
+              <TabsTrigger value="response" className="flex items-center gap-2">
+                <Logs className="h-3.5 w-3.5" />
+                Response
+              </TabsTrigger>
+              <TabsTrigger value="request" className="flex items-center gap-2">
+                <FileText className="h-3.5 w-3.5" />
+                Request
+              </TabsTrigger>
             </TabsList>
           </div>
 

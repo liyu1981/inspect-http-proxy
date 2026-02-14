@@ -7,6 +7,9 @@ import {
   AlertCircle,
   Copy,
   Download,
+  FileText,
+  List,
+  Logs,
   ShieldCheck,
 } from "lucide-react";
 import { useEffect, useMemo } from "react";
@@ -114,22 +117,23 @@ export function HttpResponseViewer({
         <Tabs defaultValue="status" className="flex flex-col h-full">
           <TabsList className="w-full justify-start rounded-none border-b-none bg-muted/20 px-4">
             {[
-              { value: "status", label: "Status" },
-              { value: "body", label: "Response Body" },
-              { value: "headers", label: "Response Headers" },
-              { value: "request", label: "Request Details" },
+              { value: "status", label: "Status", icon: Activity },
+              { value: "body", label: "Response Body", icon: Logs },
+              { value: "headers", label: "Response Headers", icon: List },
+              { value: "request", label: "Request Details", icon: FileText },
             ].map((tab) => (
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
                 className={cn(
-                  "rounded-none h-full px-4 text-xs font-medium transition-all border-none shadow-none",
+                  "rounded-none h-full px-4 text-xs font-medium transition-all border-none shadow-none flex items-center gap-2",
                   // Hover State: Medium Dark
                   "hover:bg-muted/40 hover:text-foreground",
                   // Active State: Deep Dark
                   "data-[state=active]:bg-muted data-[state=active]:text-foreground data-[state=active]:shadow-none",
                 )}
               >
+                {tab.icon && <tab.icon className="h-3.5 w-3.5" />}
                 {tab.label}
               </TabsTrigger>
             ))}

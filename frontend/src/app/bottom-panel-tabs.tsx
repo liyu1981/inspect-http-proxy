@@ -1,7 +1,7 @@
 "use client";
 
 import { useSetAtom } from "jotai";
-import { Globe } from "lucide-react";
+import { Globe, Logs } from "lucide-react";
 import React from "react";
 import HttpReqBuilder from "./_components/http-req-builder";
 import {
@@ -38,6 +38,7 @@ export function useBottomPanelTabs() {
     // then initialize any stored tabs from localStorage
     initializeStoredTabs((tabData) => {
       let content = null;
+      let icon = undefined;
 
       // Reconstruct content based on contentType and contentProps
       if (tabData.contentType === "HttpResponseViewer") {
@@ -46,12 +47,14 @@ export function useBottomPanelTabs() {
             {...(tabData.contentProps as HttpResponseViewerProps)}
           />
         );
+        icon = Logs;
       }
 
       return {
         id: tabData.id,
         label: tabData.label,
         content,
+        icon,
         closeable: tabData.closeable,
       };
     });

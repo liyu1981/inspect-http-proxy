@@ -1,7 +1,14 @@
+/** biome-ignore-all lint/a11y/noStaticElementInteractions: use as button */
 "use client";
 
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { ArrowDownToLine, Plus, X } from "lucide-react";
+import {
+  ArrowDownToLine,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  X,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -37,6 +44,8 @@ export function BottomPanel({
   const [panelHeight, setPanelHeight] = useState(defaultHeight);
   const [isResizing, setIsResizing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollButtons, setShowScrollButtons] = useState(false);
 
   // Update active tab when tabs change
   useEffect(() => {
@@ -77,8 +86,58 @@ export function BottomPanel({
     };
   }, [isResizing, minHeight, maxHeightVh]);
 
+  // Check for overflow to show/hide scroll buttons
+  // biome-ignore lint/correctness/useExhaustiveDependencies: necessary
+  useEffect(() => {
+    const container = tabsContainerRef.current;
+    if (!container) return;
+
+    const checkOverflow = () => {
+      setShowScrollButtons(container.scrollWidth > container.clientWidth);
+    };
+
+    checkOverflow();
+
+    const observer = new ResizeObserver(checkOverflow);
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, [tabs]);
+
+  // Scroll active tab into view
+  useEffect(() => {
+    if (activeTabId && tabsContainerRef.current) {
+      const activeElement = tabsContainerRef.current.querySelector(
+        `[data-tab-id="${activeTabId}"]`,
+      );
+      if (activeElement) {
+        activeElement.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+          inline: "center",
+        });
+      }
+    }
+  }, [activeTabId]);
+
   const handleCloseTab = (tabId: string) => {
     removeTab(tabId);
+  };
+
+  const currentIndex = tabs.findIndex((t) => t.id === activeTabId);
+  const canGoPrev = currentIndex > 0;
+  const canGoNext = currentIndex < tabs.length - 1 && currentIndex !== -1;
+
+  const goToNextTab = () => {
+    if (canGoNext) {
+      setActiveTabId(tabs[currentIndex + 1].id);
+    }
+  };
+
+  const goToPrevTab = () => {
+    if (canGoPrev) {
+      setActiveTabId(tabs[currentIndex - 1].id);
+    }
   };
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
@@ -92,7 +151,6 @@ export function BottomPanel({
       style={{ height: `${panelHeight}px` }}
     >
       {/* Resize Handle */}
-      {/** biome-ignore lint/a11y/noStaticElementInteractions: resize handler */}
       <div
         className="h-1 bg-border hover:bg-primary cursor-ns-resize transition-colors flex-shrink-0"
         onMouseDown={() => setIsResizing(true)}
@@ -100,16 +158,31 @@ export function BottomPanel({
 
       {/* Tab Bar */}
       <div className="flex items-center border-b bg-muted/20 flex-shrink-0">
-        <div className="flex-1 flex items-center overflow-x-auto">
+        {showScrollButtons && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-8 flex-shrink-0 rounded-none border-r"
+            disabled={!canGoPrev}
+            onClick={goToPrevTab}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+        )}
+        <div
+          ref={tabsContainerRef}
+          className="flex-1 flex items-center overflow-x-auto no-scrollbar"
+        >
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 type="button"
                 key={tab.id}
+                data-tab-id={tab.id}
                 onClick={() => setActiveTabId(tab.id)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 text-sm font-medium border-r transition-colors whitespace-nowrap group",
+                  "flex items-center gap-2 px-4 py-2 text-sm font-medium border-r transition-colors whitespace-nowrap group h-9",
                   activeTabId === tab.id
                     ? "bg-background text-foreground"
                     : "bg-muted/100 text-muted-foreground hover:text-foreground hover:bg-muted/50",
@@ -127,6 +200,7 @@ export function BottomPanel({
                 )}
                 {tab.closeable !== false && (
                   <a
+                    // biome-ignore lint/a11y/useValidAnchor: a is used as button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleCloseTab(tab.id);
@@ -143,17 +217,28 @@ export function BottomPanel({
             <button
               type="button"
               onClick={onAddTab}
-              className="flex items-center gap-1 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              className="flex items-center gap-1 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors h-9"
             >
               <Plus className="h-4 w-4" />
             </button>
           )}
         </div>
+        {showScrollButtons && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-8 flex-shrink-0 rounded-none border-l"
+            disabled={!canGoNext}
+            onClick={goToNextTab}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setIsOpen(false)}
-          className="flex-shrink-0 mr-2"
+          className="flex-shrink-0 mx-2"
         >
           <ArrowDownToLine className="h-4 w-4" />
         </Button>

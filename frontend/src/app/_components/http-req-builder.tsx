@@ -1,7 +1,7 @@
 "use client";
 
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { FileText, Loader2, Plus, Send, X } from "lucide-react"; // Added Zap/Globe for tab icons
+import { Loader2, Logs, Plus, Send, X } from "lucide-react"; // Added Zap/Globe for tab icons
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,7 +70,7 @@ export default function HttpReqBuilder() {
       addTab({
         newTab: {
           label: `${method} ${url.replace(/^https?:\/\//, "")}`,
-          icon: FileText,
+          icon: Logs,
           content: <HttpResponseViewer responseHashKey={hash} />,
           closeable: true,
         },

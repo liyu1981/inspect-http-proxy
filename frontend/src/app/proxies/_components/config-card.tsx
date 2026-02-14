@@ -6,6 +6,7 @@ import { JsonEditor } from "@/app/_components/json-editor";
 import { formatConfigDisplayName } from "@/app/history/_components/config-selector";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import type { ProxyConfig } from "@/types";
 import { ProxyStatusButton } from "./proxy-status-button";
 

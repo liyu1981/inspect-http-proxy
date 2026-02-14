@@ -118,7 +118,9 @@ export function AppNavSidebar() {
         {navExpanded && (
           <div className="flex items-center gap-2">
             <Globe className="h-5 w-5 text-primary" />
-            <span className="font-semibold text-sm text-primary">{navTitle}</span>
+            <span className="font-semibold text-sm text-primary">
+              {navTitle}
+            </span>
           </div>
         )}
         <Button

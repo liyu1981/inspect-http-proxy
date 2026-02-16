@@ -1,7 +1,7 @@
 "use client";
 
 import { useSetAtom } from "jotai";
-import { Hammer } from "lucide-react";
+import { Globe } from "lucide-react";
 import React from "react";
 import HttpReqBuilder from "./_components/http-req-builder";
 import {
@@ -28,8 +28,9 @@ export function useBottomPanelTabs() {
             <HttpReqBuilder />
           </div>
         ),
-        icon: Hammer,
+        icon: Globe,
         closeable: false,
+        autoCollapseTabTrigger: true,
       },
       skipSync: true, // Skip sync as fixed tabs are not stored in IndexedDB
     });

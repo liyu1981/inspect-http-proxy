@@ -116,10 +116,17 @@ export function BottomPanel({
                 )}
               >
                 {Icon && <Icon className="h-4 w-4" />}
-                <span title={tab.label}>{tab.label}</span>
+                {tab.autoCollapseTabTrigger ? (
+                  activeTabId === tab.id ? (
+                    <span title={tab.label}>{tab.label}</span>
+                  ) : (
+                    ""
+                  )
+                ) : (
+                  <span title={tab.label}>{tab.label}</span>
+                )}
                 {tab.closeable !== false && (
-                  <button
-                    type="button"
+                  <a
                     onClick={(e) => {
                       e.stopPropagation();
                       handleCloseTab(tab.id);
@@ -127,7 +134,7 @@ export function BottomPanel({
                     className="ml-1 p-0.5 rounded hover:bg-muted-foreground/20 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <X className="h-3 w-3" />
-                  </button>
+                  </a>
                 )}
               </button>
             );

@@ -1,6 +1,6 @@
 [build]
 bin = "./tmp/proxy"
-cmd = "go build -o ./tmp/proxy ./cmd/proxy/main.go"
+cmd = "go build -tags fts5 -o ./tmp/proxy ./cmd/proxy/main.go"
 include_ext = ["go", "html", "js", "sql"]
 include_dir = ["pkg", "cmd", "migrations"]
 exclude_dir = ["out", "node_modules"]

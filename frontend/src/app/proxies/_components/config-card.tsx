@@ -3,7 +3,7 @@
 import { AlertCircle, Clock, Folder, Hash, Terminal } from "lucide-react";
 import { useMemo, useState } from "react";
 import { JsonEditor } from "@/app/_components/json-editor";
-import { formatConfigDisplayName } from "@/app/inspect/_components/config-selector";
+import { formatConfigDisplayName } from "@/app/history/_components/config-selector";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { api } from "@/lib/api";
 import type { ProxyConfig } from "@/types";

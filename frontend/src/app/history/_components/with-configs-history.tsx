@@ -2,78 +2,106 @@
 
 import * as React from "react";
 import useSWR from "swr";
-import { useGlobal } from "@/app/_components/global-app-context";
+import { useDebounced } from "@/app/_hooks/use-debounced";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { fetcher } from "@/lib/api";
 import type { ProxySessionStub, SessionListResponse } from "@/types";
 import { useSubscription } from "../../_hooks/use-subscription";
-import { useConfig } from "./config-provider";
 import { EmptySessionState } from "./empty-session-state";
 import { SessionDetails } from "./session-details";
 import { SessionList } from "./session-list";
 
-interface WithConfigsStateProps {
+interface WithConfigsHistoryProps {
+  configId: string;
   onMutate: (mutate: () => void) => void;
   onValidatingChange: (isValidating: boolean) => void;
+  searchQuery: string;
+  filterMethod: string;
+  filterStatus: string;
+  onSearchQueryChange: (val: string) => void;
+  onFilterMethodChange: (val: string) => void;
+  onFilterStatusChange: (val: string) => void;
+  initLoadSessions?: (
+    configId: string,
+    params: URLSearchParams,
+  ) => Promise<SessionListResponse>;
+  mergeSessions?: (
+    prev: ProxySessionStub[],
+    session: ProxySessionStub,
+  ) => ProxySessionStub[];
 }
 
-export function WithConfigsState({
+export function WithConfigsHistory({
+  configId,
   onMutate,
   onValidatingChange,
-}: WithConfigsStateProps) {
+  searchQuery,
+  filterMethod,
+  filterStatus,
+  onSearchQueryChange,
+  onFilterMethodChange,
+  onFilterStatusChange,
+  initLoadSessions,
+  mergeSessions,
+}: WithConfigsHistoryProps) {
   const [selectedSessionId, setSelectedSessionId] = React.useState<
     string | null
   >(null);
-  const [filterMethod, setFilterMethod] = React.useState<string>("");
-  const [filterStatus, setFilterStatus] = React.useState<string>("");
+
+  const [debouncedSearchQuery, _setDebouncedSearchQuery] = useDebounced(
+    searchQuery,
+    500,
+  );
+
   const [allLoadedSessions, setAllLoadedSessions] = React.useState<
     ProxySessionStub[]
   >([]);
+
   const [offset, setOffset] = React.useState<number>(0);
   const [limit] = React.useState<number>(50);
   const [isLoadingMore, setIsLoadingMore] = React.useState<boolean>(false);
-
-  const { allConfigs } = useGlobal();
-  const { selectedConfigId, setSelectedConfigId } = useConfig();
-
-  // Initialize selectedConfigId if not set
-  React.useEffect(() => {
-    if (!selectedConfigId && allConfigs.length > 0) {
-      setSelectedConfigId(allConfigs[0].id);
-    }
-  }, [selectedConfigId, allConfigs, setSelectedConfigId]);
-
-  // Reset loaded sessions when filters or config change
-  React.useEffect(() => {
-    setAllLoadedSessions([]);
-    setOffset(0);
-  }, []);
 
   // Build query string
   const params = new URLSearchParams();
   params.set("limit", limit.toString());
   params.set("offset", offset.toString());
-  if (filterMethod) params.set("method", filterMethod);
-  if (filterStatus) params.set("status", filterStatus);
-
-  // Use selectedConfigId instead of allConfigs[0]
-  const configId = selectedConfigId || allConfigs[0]?.id || "";
+  if (filterMethod) {
+    params.set("method", filterMethod);
+  }
+  if (filterStatus) {
+    params.set("status", filterStatus);
+  }
+  if (debouncedSearchQuery) {
+    params.set("q", debouncedSearchQuery);
+  }
 
   const {
     data: sessionList,
     mutate,
     isValidating,
   } = useSWR<SessionListResponse>(
-    configId ? `/api/sessions/recent/${configId}?${params.toString()}` : null,
-    fetcher,
+    configId && initLoadSessions
+      ? ["sessions", configId, params.toString()]
+      : null,
+    ([_, id, p]) =>
+      initLoadSessions!(id as string, new URLSearchParams(p as any)),
     {
       revalidateOnFocus: false,
     },
   );
+
+  // Pass mutate function to parent
+  React.useEffect(() => {
+    onMutate(() => mutate());
+  }, [mutate, onMutate]);
+
+  // Pass isValidating to parent
+  React.useEffect(() => {
+    onValidatingChange(isValidating);
+  }, [isValidating, onValidatingChange]);
 
   // Merge new data into allLoadedSessions
   React.useEffect(() => {
@@ -94,48 +122,30 @@ export function WithConfigsState({
     }
   }, [sessionList, offset]);
 
-  // Pass mutate function to parent
-  React.useEffect(() => {
-    onMutate(() => mutate());
-  }, [mutate, onMutate]);
+  useSubscription(
+    "sessions",
+    ({ session, type }: { session: ProxySessionStub; type: string }) => {
+      console.log(
+        "received session update via subscription:",
+        type,
+        session,
+        configId,
+      );
 
-  // Pass isValidating to parent
-  React.useEffect(() => {
-    onValidatingChange(isValidating);
-  }, [isValidating, onValidatingChange]);
-
-  useSubscription("sessions", (session: ProxySessionStub) => {
-    if (session.ConfigID !== configId) {
-      return;
-    }
-
-    // Check if the new session matches current filters
-    if (filterMethod && session.RequestMethod !== filterMethod.toUpperCase()) {
-      return;
-    }
-
-    if (
-      filterStatus &&
-      !session.ResponseStatusCode.toString().includes(filterStatus)
-    ) {
-      return;
-    }
-
-    // Update allLoadedSessions
-    setAllLoadedSessions((prev) => {
-      const existingIndex = prev.findIndex((s) => s.ID === session.ID);
-
-      if (existingIndex > -1) {
-        // Update existing session
-        const updated = [...prev];
-        updated[existingIndex] = session;
-        return updated;
-      } else {
-        // Add new session to the beginning
-        return [session, ...prev];
+      if (type !== "new_session") {
+        return;
       }
-    });
-  });
+
+      if (session.ConfigID !== configId) {
+        return;
+      }
+
+      // mergeSessions will merge and update allLoadedSessions
+      if (mergeSessions) {
+        setAllLoadedSessions((prev) => mergeSessions(prev, session));
+      }
+    },
+  );
 
   React.useEffect(() => {
     if (allLoadedSessions.length > 0) {
@@ -147,22 +157,24 @@ export function WithConfigsState({
     }
   }, [allLoadedSessions, selectedSessionId]);
 
+  React.useEffect(() => {
+    setSelectedSessionId(null);
+  }, [configId]);
+
+  // Check if there are more sessions to load
+  const hasMore =
+    sessionList && sessionList.sessions
+      ? sessionList?.sessions.length === limit
+      : false;
+
   const handleSessionClick = (id: string) => {
     setSelectedSessionId(id);
-  };
-
-  const clearFilters = () => {
-    setFilterMethod("");
-    setFilterStatus("");
   };
 
   const handleLoadMore = () => {
     setIsLoadingMore(true);
     setOffset((prev) => prev + limit);
   };
-
-  // Check if there are more sessions to load
-  const hasMore = sessionList?.sessions.length === limit;
 
   return (
     <ResizablePanelGroup orientation="horizontal">
@@ -173,13 +185,19 @@ export function WithConfigsState({
           selectedSessionId={selectedSessionId}
           filterMethod={filterMethod}
           filterStatus={filterStatus}
+          searchQuery={searchQuery}
           totalLoaded={allLoadedSessions.length}
           hasMore={hasMore}
           isLoadingMore={isLoadingMore}
           onSessionClick={handleSessionClick}
-          onFilterMethodChange={setFilterMethod}
-          onFilterStatusChange={setFilterStatus}
-          onClearFilters={clearFilters}
+          onFilterMethodChange={onFilterMethodChange}
+          onFilterStatusChange={onFilterStatusChange}
+          onSearchQueryChange={onSearchQueryChange}
+          onClearFilters={() => {
+            onFilterMethodChange("");
+            onFilterStatusChange("");
+            onSearchQueryChange("");
+          }}
           onLoadMore={handleLoadMore}
         />
       </ResizablePanel>

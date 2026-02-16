@@ -1,26 +1,34 @@
-import { Brackets, List, Settings } from "lucide-react";
+import { Brackets, List, Settings, Timer } from "lucide-react";
 
 export const navTitle = "HTTP Inspector";
 
-export const defaultNavItem = "inspect";
+export const defaultNavItem = "recent";
 
 export const navItems = [
-  {
-    id: "inspect" as const,
-    icon: List,
-    label: "Inspect Traffic",
-    path: "/inspect",
-  },
-  {
-    id: "proxies" as const,
-    icon: Brackets,
-    label: "Proxy Servers",
-    path: "/proxies",
-  },
-  {
-    id: "settings" as const,
-    icon: Settings,
-    label: "Settings",
-    path: "/settings",
-  },
+	{
+		id: "recent" as const,
+		icon: List,
+		label: "Recent Traffic",
+		path: "/recent",
+	},
+	{
+		id: "history" as const,
+		icon: Timer,
+		label: "History Traffic",
+		path: "/history",
+	},
+	{
+		id: "proxies" as const,
+		icon: Brackets,
+		label: "Proxy Servers",
+		path: "/proxies",
+		position: "bottom",
+	},
+	{
+		id: "settings" as const,
+		icon: Settings,
+		label: "Settings",
+		path: "/settings",
+		position: "bottom",
+	},
 ];

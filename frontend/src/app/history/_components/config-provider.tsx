@@ -5,7 +5,8 @@ import * as React from "react";
 import { useGlobal } from "@/app/_components/global-app-context";
 
 interface ConfigContextType {
-  selectedConfigId: string | null;
+  mode: string;
+  selectedConfigId: string;
   setSelectedConfigId: (id: string) => void;
 }
 
@@ -16,21 +17,27 @@ const ConfigContext = React.createContext<ConfigContextType | undefined>(
 /**
  * Inner component to handle search params logic safely within Suspense
  */
-function ConfigProviderInner({ children }: { children: React.ReactNode }) {
+function ConfigProviderInner({
+  mode,
+  children,
+}: {
+  mode: string;
+  children: React.ReactNode;
+}) {
   const { allConfigs } = useGlobal();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [selectedConfigId, setSelectedConfigIdState] = React.useState<
-    string | null
-  >(null);
+  const [selectedConfigId, setSelectedConfigIdState] = React.useState<string>(
+    allConfigs.length > 0 ? allConfigs[0].config_row.ID : "",
+  );
 
   const updateURLConfigId = React.useCallback(
     (id: string) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set("config_id", id);
-      router.replace(`/inspect?${params.toString()}`, { scroll: false });
+      router.replace(`/${mode}?${params.toString()}`, { scroll: false });
     },
-    [router, searchParams],
+    [router, searchParams, mode],
   );
 
   // Initialize from URL on mount or when configs change
@@ -58,13 +65,15 @@ function ConfigProviderInner({ children }: { children: React.ReactNode }) {
       setSelectedConfigIdState(id);
       const params = new URLSearchParams(searchParams.toString());
       params.set("config_id", id);
-      router.push(`/inspect?${params.toString()}`, { scroll: false });
+      router.push(`/${mode}?${params.toString()}`, { scroll: false });
     },
-    [router, searchParams],
+    [router, searchParams, mode],
   );
 
   return (
-    <ConfigContext.Provider value={{ selectedConfigId, setSelectedConfigId }}>
+    <ConfigContext.Provider
+      value={{ mode, selectedConfigId, setSelectedConfigId }}
+    >
       {children}
     </ConfigContext.Provider>
   );
@@ -73,10 +82,16 @@ function ConfigProviderInner({ children }: { children: React.ReactNode }) {
 /**
  * Main Provider wrapped in Suspense to prevent Next.js build bail-out
  */
-export function ConfigProvider({ children }: { children: React.ReactNode }) {
+export function ConfigProvider({
+  mode,
+  children,
+}: {
+  mode: string;
+  children: React.ReactNode;
+}) {
   return (
     <React.Suspense fallback={null}>
-      <ConfigProviderInner>{children}</ConfigProviderInner>
+      <ConfigProviderInner mode={mode}>{children}</ConfigProviderInner>
     </React.Suspense>
   );
 }

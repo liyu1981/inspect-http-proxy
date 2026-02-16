@@ -286,6 +286,30 @@ func GetSessionsWithQueryParam(db *gorm.DB, configID string, paramName string, l
 	return sessions, err
 }
 
+// SearchSessions performs a full-text search using FTS5
+func SearchSessions(db *gorm.DB, configID string, searchText string, limit int, offset int) ([]ProxySessionRow, error) {
+	var sessions []ProxySessionRow
+
+	// Construct the FTS5 query
+	// We join with proxy_sessions_fts and filter by config_id
+	// The results are ordered by the FTS rank (relevance) or timestamp?
+	// Usually, for a log-like tool, timestamp DESC is preferred, but FTS rank is good for search.
+	// Let's use timestamp DESC as primary, or just rely on FTS rank if desired.
+	// For now, let's keep it consistent with other queries: timestamp DESC.
+
+	sql := `
+		SELECT s.* 
+		FROM proxy_sessions s
+		JOIN proxy_sessions_fts f ON s.id = f.session_id
+		WHERE f.config_id = ? AND proxy_sessions_fts MATCH ?
+		ORDER BY s.timestamp DESC
+		LIMIT ? OFFSET ?
+	`
+
+	err := db.Raw(sql, configID, searchText, limit, offset).Scan(&sessions).Error
+	return sessions, err
+}
+
 // ============================================================
 // Internal Helpers & Stats
 // ============================================================

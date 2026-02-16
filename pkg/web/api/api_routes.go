@@ -58,6 +58,7 @@ func (h *ApiHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/sessions/by-header/{config_id}", h.handleSessionsWithHeader)
 	mux.HandleFunc("/api/sessions/by-header-value/{config_id}", h.handleSessionsByHeaderValue)
 	mux.HandleFunc("/api/sessions/by-query-param/{config_id}", h.handleSessionsWithQueryParam)
+	mux.HandleFunc("/api/sessions/search/{config_id}", h.handleSearchSessions)
 
 	// General Session Handlers
 	mux.HandleFunc("/api/sessions/{id}", h.handleSessionDetail)

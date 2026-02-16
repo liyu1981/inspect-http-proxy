@@ -13,8 +13,6 @@ interface JsonEditorProps {
 export const JsonEditor: React.FC<
   Partial<JsonEditorReactProps> & JsonEditorProps
 > = ({ initialJson, onChangeJson, ...restProps }) => {
-  console.log("render with:", initialJson);
-
   const [json, setJson] = useState<object>(initialJson);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);

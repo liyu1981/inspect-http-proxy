@@ -1,0 +1,121 @@
+# Claude Code Ignore File
+
+# Project-specific ignores
+.proxy.config.toml
+*.db
+*.db-shm
+*.db-wal
+.proxy/
+tmp/
+
+# Build outputs
+pkg/web/ui/out/
+proxy_server
+
+# Development artifacts
+.air.toml
+*.air.toml
+*.air.txt
+
+# AI assistant caches
+.agents/
+.codex/
+.windsurf/
+.gemini/
+
+# Generated files
+frontend/out/
+frontend/.next/
+frontend/build/
+frontend/.nyc_output/
+
+# Test and coverage
+coverage/
+*.coverage
+*.lcov
+*.out
+
+# Environment files
+.env*
+!.env.example
+
+# Logs
+logs/
+*.log
+
+# Dependency directories
+node_modules/
+frontend/node_modules/
+
+# Package managers
+.yarn/
+.pnpm/
+.pnp.*
+.lock-wscript
+
+# IDE and editor files (keep configs)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# OS specific
+.DS_Store
+*.pem
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Temporary files
+*~
+.nfs*
+.Trash-*
+.fuse_hidden*
+
+# Cache directories
+.cache/
+.parcel-cache/
+.grunt/
+.jspm_packages/
+
+# Next.js build output
+.next/
+dist/
+.nuxt/
+vuepress/dist/
+
+# Serverless
+.serverless/
+webpack/
+
+# SvelteKit
+.svelte-kit/
+
+# Snowpack
+web_modules/
+
+# TernJS
+.tern-port
+
+# Yarn
+.yarn-integrity
+
+# Database
+*.pid
+*.seed
+*.pid.lock
+
+# Gatsby
+.cache/
+
+# Docusaurus
+.docusaurus/
+
+# DynamoDB Local
+.dynamodb/
+
+# FuseBox
+.fusebox/

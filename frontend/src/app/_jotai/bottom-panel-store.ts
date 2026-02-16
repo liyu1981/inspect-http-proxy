@@ -17,6 +17,7 @@ export interface BottomPanelTab {
   content?: React.ReactNode | null;
   icon?: React.ComponentType<{ className?: string }>;
   closeable?: boolean;
+  autoCollapseTabTrigger?: boolean;
 }
 
 // Serializable tab data for localStorage

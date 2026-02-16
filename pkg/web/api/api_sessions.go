@@ -228,6 +228,51 @@ func (h *ApiHandler) handleSessionsWithQueryParam(w http.ResponseWriter, r *http
 	})
 }
 
+// handleSearchSessions handles full-text search requests
+func (h *ApiHandler) handleSearchSessions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	configID := r.PathValue("config_id")
+	query := r.URL.Query().Get("q")
+	limit := getIntParam(r, "limit", 20)
+	offset := getIntParam(r, "offset", 0)
+
+	if query == "" {
+		// Fallback to recent sessions if query is empty
+		sessions, err := core.GetRecentSessions(h.db, configID, limit, offset)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "Failed to fetch sessions", err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"config_id": configID,
+			"count":     len(sessions),
+			"limit":     limit,
+			"offset":    offset,
+			"sessions":  sessions,
+		})
+		return
+	}
+
+	sessions, err := core.SearchSessions(h.db, configID, query, limit, offset)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Search failed", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"config_id": configID,
+		"query":     query,
+		"count":     len(sessions),
+		"limit":     limit,
+		"offset":    offset,
+		"sessions":  sessions,
+	})
+}
+
 // handleSessionDetail returns detailed information about a specific session
 func (h *ApiHandler) handleSessionDetail(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {

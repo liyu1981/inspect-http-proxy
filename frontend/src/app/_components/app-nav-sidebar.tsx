@@ -39,6 +39,8 @@ export function AppNavSidebar() {
   const [activeMenu, setActiveMenu] = React.useState(getActiveMenuFromPath());
 
   const menuItems = navItems;
+  const topMenuItems = navItems.filter((item) => item.position !== "bottom");
+  const bottomMenuItems = navItems.filter((item) => item.position === "bottom");
 
   // Update active menu when pathname changes
   React.useEffect(() => {
@@ -96,7 +98,7 @@ export function AppNavSidebar() {
       <PanelBottom className="h-5 w-5 flex-shrink-0" />
       {navExpanded && (
         <span className="text-sm font-medium">
-          {isPanelOpen ? "Close Panel" : "Open Panel"}
+          {isPanelOpen ? "Close Bottom Panels" : "Open Bottom Panels"}
         </span>
       )}
     </button>
@@ -133,7 +135,7 @@ export function AppNavSidebar() {
 
       {/* Menu Items */}
       <nav className="flex-1 p-2">
-        {menuItems.map((item) => {
+        {topMenuItems.map((item) => {
           const Icon = item.icon;
           const button = (
             <button
@@ -167,6 +169,37 @@ export function AppNavSidebar() {
 
       {/* Footer Actions */}
       <div className="p-2 border-t space-y-1">
+        {bottomMenuItems.map((item) => {
+          const Icon = item.icon;
+          const button = (
+            <button
+              type="button"
+              key={item.id}
+              onClick={() => handleMenuClick(item.id)}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors mb-1",
+                activeMenu === item.id
+                  ? "bg-primary text-primary-foreground"
+                  : "hover:bg-muted text-muted-foreground hover:text-foreground",
+                !navExpanded && "justify-center",
+              )}
+            >
+              <Icon className="h-5 w-5 flex-shrink-0" />
+              {navExpanded && (
+                <span className="text-sm font-medium">{item.label}</span>
+              )}
+            </button>
+          );
+          return navExpanded ? (
+            button
+          ) : (
+            <Tooltip key={item.id}>
+              <TooltipTrigger asChild>{button}</TooltipTrigger>
+              <TooltipContent side="right">{item.label}</TooltipContent>
+            </Tooltip>
+          );
+        })}
+
         {/* Connection Status */}
         {navExpanded ? (
           statusButton
@@ -186,7 +219,7 @@ export function AppNavSidebar() {
           <Tooltip>
             <TooltipTrigger asChild>{panelButton}</TooltipTrigger>
             <TooltipContent side="right">
-              {isPanelOpen ? "Close Panel" : "Open Panel"}
+              {isPanelOpen ? "Close Bottom Panels" : "Open Bottom Panels"}
             </TooltipContent>
           </Tooltip>
         )}

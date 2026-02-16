@@ -1,10 +1,17 @@
 "use client";
 
 import { format, formatDistanceToNow } from "date-fns";
-import { Loader2, Search } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -21,12 +28,14 @@ interface SessionListProps {
   selectedSessionId: string | null;
   filterMethod: string;
   filterStatus: string;
+  searchQuery: string;
   totalLoaded: number;
   hasMore: boolean;
   isLoadingMore: boolean;
   onSessionClick: (id: string) => void;
   onFilterMethodChange: (value: string) => void;
   onFilterStatusChange: (value: string) => void;
+  onSearchQueryChange: (value: string) => void;
   onClearFilters: () => void;
   onLoadMore: () => void;
 }
@@ -36,6 +45,7 @@ export function SessionList({
   selectedSessionId,
   filterMethod,
   filterStatus,
+  searchQuery,
   totalLoaded,
   hasMore,
   isLoadingMore,
@@ -45,31 +55,67 @@ export function SessionList({
   onClearFilters,
   onLoadMore,
 }: SessionListProps) {
+  // Get unique methods and statuses from loaded sessions
+  const availableMethods = React.useMemo(() => {
+    const methods = new Set(sessions.map((s) => s.RequestMethod));
+    return Array.from(methods).sort();
+  }, [sessions]);
+
+  const availableStatuses = React.useMemo(() => {
+    const statuses = new Set(
+      sessions.map((s) => s.ResponseStatusCode.toString()),
+    );
+    return Array.from(statuses).sort();
+  }, [sessions]);
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Filters Area */}
-      <div className="border-b px-6 py-2 flex items-center gap-4 bg-muted/40 flex-shrink-0">
-        <div className="relative w-64">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Filter method..."
-            className="pl-8 h-9"
-            value={filterMethod}
-            onChange={(e) => onFilterMethodChange(e.target.value)}
-          />
-        </div>
-        <Input
-          placeholder="Filter status code..."
-          className="w-40 h-9"
-          value={filterStatus}
-          onChange={(e) => onFilterStatusChange(e.target.value)}
-        />
-        {(filterMethod || filterStatus) && (
+      <div className="border-b px-6 py-2 flex items-center gap-2 bg-muted/40 flex-shrink-0 justify-end">
+        <Select
+          value={filterMethod || "all_methods"}
+          onValueChange={(val) =>
+            onFilterMethodChange(val === "all_methods" ? "" : val)
+          }
+        >
+          <SelectTrigger className="w-[110px] h-8 text-[11px]">
+            <SelectValue placeholder="Method" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all_methods">All Methods</SelectItem>
+            {availableMethods.map((m) => (
+              <SelectItem key={m} value={m}>
+                {m}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filterStatus || "all_statuses"}
+          onValueChange={(val) =>
+            onFilterStatusChange(val === "all_statuses" ? "" : val)
+          }
+        >
+          <SelectTrigger className="w-[100px] h-8 text-[11px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all_statuses">All Status</SelectItem>
+            {availableStatuses.map((s) => (
+              <SelectItem key={s} value={s}>
+                {s}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {(filterMethod || filterStatus || searchQuery) && (
           <Button
             variant="ghost"
             size="sm"
             onClick={onClearFilters}
-            className="h-8"
+            className="h-8 ml-auto text-xs"
           >
             Clear
           </Button>

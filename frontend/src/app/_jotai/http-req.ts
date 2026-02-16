@@ -200,7 +200,11 @@ export const addFormDataEntryAtom = atom(null, (get, set) => {
 
 export const updateFormDataEntryAtom = atom(
   null,
-  (get, set, update: { id: string; field: keyof FormDataEntry; value: any }) => {
+  (
+    get,
+    set,
+    update: { id: string; field: keyof FormDataEntry; value: any },
+  ) => {
     const updatedEntries = get(requestFormDataEntriesAtom).map((e) =>
       e.id === update.id ? { ...e, [update.field]: update.value } : e,
     );

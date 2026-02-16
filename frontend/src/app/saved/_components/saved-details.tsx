@@ -62,19 +62,25 @@ export function SavedDetails({ id }: SavedDetailsProps) {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [note, setNote] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
 
-  const [debouncedNote] = useDebounced(note, 1000);
-  const [debouncedTags] = useDebounced(tagsToString(tags), 1000);
+  // dirtyRef tracks if there are unsaved changes
+  const dirtyRef = useRef(false);
 
-  const initialLoadRef = useRef(true);
+  // Use a longer debounce for auto-saving during edit (2 seconds)
+  const [debouncedNote] = useDebounced(note, 2000);
+  const [debouncedTags] = useDebounced(tagsToString(tags), 2000);
 
-  const { data: bookmark, error } = useSWR<ProxyBookmark>(
-    id ? `/api/bookmarks/${id}` : null,
-    fetcher,
-  );
+  const {
+    data: bookmark,
+    error,
+    mutate,
+  } = useSWR<ProxyBookmark>(id ? `/api/bookmarks/${id}` : null, fetcher);
 
+  // Initial load and sync from server
   useEffect(() => {
-    if (bookmark) {
+    // Only sync from SWR if we are not editing AND we don't have unsaved local changes
+    if (bookmark && !isEditing && !dirtyRef.current) {
       setNote(bookmark.Note || "");
       const tagArray = bookmark.Tags
         ? bookmark.Tags.split(" ")
@@ -82,33 +88,44 @@ export function SavedDetails({ id }: SavedDetailsProps) {
             .filter(Boolean)
         : [];
       setTags(tagArray);
-      initialLoadRef.current = true;
     }
-  }, [bookmark]);
+  }, [bookmark, isEditing]); // Removed id as bookmark already changes when switching
 
   const handleUpdate = useCallback(async () => {
-    if (initialLoadRef.current) {
-      initialLoadRef.current = false;
-      return;
-    }
+    if (!dirtyRef.current) return;
 
     setIsSaving(true);
     try {
-      await updateBookmark(id, { note, tags: tagsToString(tags) });
+      const updated = await updateBookmark(id, {
+        note,
+        tags: tagsToString(tags),
+      });
       setLastSavedAt(new Date());
+      dirtyRef.current = false;
+      // Update local SWR cache with the response
+      mutate(updated, false);
     } catch (err) {
       console.error("Failed to update saved session", err);
     } finally {
       setIsSaving(false);
     }
-  }, [id, note, tags]);
+  }, [id, note, tags, mutate]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: needed
+  // Handle periodic auto-save when debounced values change
+  // biome-ignore lint/correctness/useExhaustiveDependencies: handleUpdate is already debounced via these values
   useEffect(() => {
-    if (!initialLoadRef.current) {
+    if (dirtyRef.current) {
       handleUpdate();
     }
-  }, [debouncedNote, debouncedTags, handleUpdate]);
+  }, [debouncedNote, debouncedTags]);
+
+  // Handle immediate save on blur
+  const handleBlur = useCallback(() => {
+    setIsEditing(false);
+    if (dirtyRef.current) {
+      handleUpdate();
+    }
+  }, [handleUpdate]);
 
   useSubscription(
     "saved_sessions",
@@ -119,13 +136,14 @@ export function SavedDetails({ id }: SavedDetailsProps) {
       type: string;
       bookmark: ProxyBookmark;
     }) => {
+      // ONLY update if we are not currently editing AND not dirty to avoid loops and race conditions
       if (
+        !isEditing &&
+        !dirtyRef.current &&
         type === "update_session" &&
         updatedBookmark &&
         updatedBookmark.ID === id
       ) {
-        // Only update if it's not the same one we're currently editing (to avoid race conditions/flickering)
-        // Actually, we should check if the content is different
         if (updatedBookmark.Note !== note) {
           setNote(updatedBookmark.Note || "");
         }
@@ -163,16 +181,19 @@ export function SavedDetails({ id }: SavedDetailsProps) {
           <SavedMetadataEditor
             note={note}
             setNote={(val) => {
-              initialLoadRef.current = false;
               setNote(val);
+              dirtyRef.current = true;
             }}
             tags={tags}
             setTags={(val) => {
-              initialLoadRef.current = false;
               setTags(val);
+              dirtyRef.current = true;
             }}
             isSaving={isSaving}
             lastSavedAt={lastSavedAt}
+            isEditing={isEditing}
+            setIsEditing={setIsEditing}
+            onBlur={handleBlur}
           />
         </ResizablePanel>
       </ResizablePanelGroup>
@@ -428,6 +449,8 @@ function SavedSessionInfo({ bookmark }: { bookmark: ProxyBookmark }) {
   );
 }
 
+import { MarkdownPreview } from "../../_components/markdown-preview";
+
 interface SavedMetadataEditorProps {
   note: string;
   setNote: (val: string) => void;
@@ -435,6 +458,9 @@ interface SavedMetadataEditorProps {
   setTags: (val: string[]) => void;
   isSaving: boolean;
   lastSavedAt: Date | null;
+  isEditing: boolean;
+  setIsEditing: (val: boolean) => void;
+  onBlur: () => void;
 }
 
 function SavedMetadataEditor({
@@ -444,7 +470,18 @@ function SavedMetadataEditor({
   setTags,
   isSaving,
   lastSavedAt,
+  isEditing,
+  setIsEditing,
+  onBlur,
 }: SavedMetadataEditorProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [isEditing]);
+
   return (
     <div className="h-full flex flex-col">
       <ScrollArea className="flex-1">
@@ -476,14 +513,35 @@ function SavedMetadataEditor({
           </div>
           <div className="space-y-2">
             <Label className="text-xs font-medium text-muted-foreground">
-              Note
+              Note (Markdown supported)
             </Label>
-            <Textarea
-              placeholder="Add some context about this session..."
-              className="min-h-[100px]"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
+            <div className="min-h-[150px] relative group">
+              {isEditing ? (
+                <Textarea
+                  ref={textareaRef}
+                  placeholder="Add some context about this session (Markdown supported)..."
+                  className="min-h-[150px] font-mono text-sm"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  onBlur={onBlur}
+                />
+              ) : (
+                <div
+                  className="min-h-[150px] p-3 rounded-md border bg-muted/20 cursor-text hover:border-primary/50 transition-colors"
+                  onClick={() => setIsEditing(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      setIsEditing(true);
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
+                  aria-label="Edit note"
+                >
+                  <MarkdownPreview content={note} />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </ScrollArea>

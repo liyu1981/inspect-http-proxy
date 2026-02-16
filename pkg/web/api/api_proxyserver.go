@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/liyu1981/inspect-http-proxy/pkg/core"
@@ -102,13 +103,54 @@ func (h *ApiHandler) handleProxyServerStop(w http.ResponseWriter, r *http.Reques
 		Msg("Stopping proxy server via API")
 
 	// Stop the proxy server
-	err := core.StopProxyServer(configID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "Failed to stop proxy server", err)
-		return
-	}
-
 	writeJSON(w, http.StatusOK, map[string]any{
 		"config_id": configID,
 	})
+}
+
+// handleProxyServerCreate creates and starts a new proxy server dynamically
+func (h *ApiHandler) handleProxyServerCreate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var entry core.SysConfigProxyEntry
+	if err := json.NewDecoder(r.Body).Decode(&entry); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if entry.Listen == "" || entry.Target == "" {
+		writeError(w, http.StatusBadRequest, "Missing listen or target", nil)
+		return
+	}
+
+	// Get websocket broadcast function
+	wsPublishFn := func(topic string, v any) {
+		if h != nil {
+			h.Publish(topic, v)
+		}
+	}
+
+	// Register and start
+	core.StartProxyServer(-1, entry, h.db, wsPublishFn)
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "success"})
+}
+
+// handleProxyServerExport writes current running proxy servers to the config file
+func (h *ApiHandler) handleProxyServerExport(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	err := core.ExportCurrentProxiesToConfig()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to export config", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "success", "message": "Configuration exported successfully"})
 }

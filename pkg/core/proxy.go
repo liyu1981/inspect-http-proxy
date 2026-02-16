@@ -233,19 +233,28 @@ func StartProxyServer(
 	// Validate target URL
 	targetURLParsed, err := url.Parse(proxyEntry.Target)
 	if err != nil || targetURLParsed.Scheme == "" {
-		log.Fatal().
-			Int("index", index).
-			Str("target", proxyEntry.Target).
-			Msg("Invalid target URL in proxy entry")
+		if index != -1 {
+			log.Fatal().
+				Int("index", index).
+				Str("target", proxyEntry.Target).
+				Msg("Invalid target URL in proxy entry")
+		} else {
+			log.Error().Str("target", proxyEntry.Target).Msg("Invalid target URL")
+			return
+		}
 	}
 
 	// Validate listen address
 	if proxyEntry.Listen == "" {
-		log.Fatal().
-			Int("index", index).
-			Msg("Missing 'listen' address in proxy entry")
+		if index != -1 {
+			log.Fatal().
+				Int("index", index).
+				Msg("Missing 'listen' address in proxy entry")
+		} else {
+			log.Error().Msg("Missing 'listen' address")
+			return
+		}
 	}
-
 	// Register configuration with database
 	configID, err := RegisterConfiguration(db, proxyEntry)
 	if err != nil {

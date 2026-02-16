@@ -1,3 +1,3 @@
 #!/bin/bash
 
-go build -o proxy ./cmd/proxy/main.go
+go build -tags fts5 -o proxy ./cmd/proxy/main.go

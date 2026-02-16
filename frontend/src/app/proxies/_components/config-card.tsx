@@ -2,6 +2,7 @@
 
 import { AlertCircle, Clock, Folder, Hash, Terminal } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useGlobal } from "@/app/_components/global-app-context";
 import { JsonEditor } from "@/app/_components/json-editor";
 import { formatConfigDisplayName } from "@/app/history/_components/config-selector";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -12,6 +13,7 @@ import { ProxyStatusButton } from "./proxy-status-button";
 
 export function ConfigCard({ config: initialConfig }: { config: ProxyConfig }) {
   const [config, setConfig] = useState(initialConfig);
+  const { sysConfig } = useGlobal();
 
   // Parse the ConfigJSON string inside the component
   const parsedData = useMemo(() => {
@@ -22,6 +24,22 @@ export function ConfigCard({ config: initialConfig }: { config: ProxyConfig }) {
       return { error: "Invalid JSON format stored in database" };
     }
   }, [config]);
+
+  // Determine if this proxy is dynamic (not in current toml file)
+  const isDynamic = useMemo(() => {
+    if (!sysConfig?.proxies || !parsedData) return false;
+
+    const normalize = (s: string) => s?.trim().toLowerCase().replace(/\/$/, "");
+    const listen = parsedData.listen || parsedData.Listen;
+    const target = parsedData.target || parsedData.Target;
+
+    // Check if any proxy in sysConfig matches this one's listen and target
+    return !sysConfig.proxies.some(
+      (p: any) =>
+        normalize(p.listen || p.Listen) === normalize(listen) &&
+        normalize(p.target || p.Target) === normalize(target),
+    );
+  }, [sysConfig, parsedData]);
 
   const handleStatusChange = async () => {
     // Refetch the config to get updated status
@@ -35,20 +53,45 @@ export function ConfigCard({ config: initialConfig }: { config: ProxyConfig }) {
 
   return (
     <div className="overflow-hidden">
-      <Card className="pt-0">
-        <CardHeader className="pt-6 border-b bg-muted/50 text-lg">
-          <div>
-            <div className="float float-right">
-              <ProxyStatusButton
-                configId={config.id}
-                isActive={config.is_proxyserver_active}
-                onStatusChange={handleStatusChange}
-              />
+      <Card
+        className={cn(
+          "pt-0",
+          isDynamic &&
+            "border-amber-200/50 dark:border-amber-900/50 bg-amber-50/10 dark:bg-amber-900/5",
+        )}
+      >
+        <CardHeader
+          className={cn(
+            "pt-6 border-b text-lg",
+            isDynamic ? "bg-amber-500/10" : "bg-muted/50",
+          )}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {formatConfigDisplayName(config)}
             </div>
-            {formatConfigDisplayName(config)}
+            <ProxyStatusButton
+              configId={config.id}
+              isActive={config.is_proxyserver_active}
+              onStatusChange={handleStatusChange}
+            />
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-1 space-y-4">
+          {isDynamic && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-semibold">Unsaved Dynamic Proxy</p>
+                <p>
+                  This proxy server is running but not yet saved to your
+                  configuration file. It will be lost upon restart unless you
+                  export.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col gap-4">
             <div className="space-y-1">
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">

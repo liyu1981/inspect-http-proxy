@@ -19,7 +19,9 @@ interface ConfigSelectorProps {
 
 export function formatConfigDisplayName(config: ProxyConfig) {
   const parsedJson = JSON.parse(config.config_row.ConfigJSON);
-  return `${parsedJson.Listen} 🠞 ${parsedJson.Target}`;
+  const listen = parsedJson.listen || parsedJson.Listen || "unknown";
+  const target = parsedJson.target || parsedJson.Target || "unknown";
+  return `${listen} 🠞 ${target}`;
 }
 
 export function ConfigSelector({

@@ -6,7 +6,9 @@ import type { ProxyConfig } from "@/types";
 
 interface GlobalContextType {
   allConfigs: ProxyConfig[];
+  sysConfig: any;
   isLoading: boolean;
+  refreshConfigs: () => void;
   error: any;
 }
 
@@ -18,18 +20,34 @@ export function GlobalAppProvider({ children }: { children: React.ReactNode }) {
   // Extract isLoading and error from SWR
   const {
     data: configs,
-    isLoading,
-    error,
+    isLoading: isConfigsLoading,
+    error: configsError,
+    mutate: mutateConfigs,
   } = useSWR<ProxyConfig[]>("/api/configs/current", fetcher, {
     revalidateOnFocus: false,
   });
+
+  const {
+    data: sysConfig,
+    isLoading: isSysLoading,
+    mutate: mutateSys,
+  } = useSWR<any>("/api/sysconfig", fetcher, {
+    revalidateOnFocus: false,
+  });
+
+  const refreshConfigs = () => {
+    mutateConfigs();
+    mutateSys();
+  };
 
   return (
     <GlobalAppContext.Provider
       value={{
         allConfigs: configs ?? [],
-        isLoading,
-        error,
+        sysConfig,
+        isLoading: isConfigsLoading || isSysLoading,
+        refreshConfigs,
+        error: configsError,
       }}
     >
       {children}

@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/liyu1981/inspect-http-proxy/pkg/core"
 	"github.com/spf13/viper"
@@ -55,6 +56,54 @@ func (h *ApiHandler) handleSysConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+}
+
+// handleConfigHistory returns a list of unique past configurations
+func (h *ApiHandler) handleConfigHistory(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	query := r.URL.Query().Get("q")
+	limit := getIntParam(r, "limit", 10)
+
+	var configs []core.ProxyConfigRow
+	dbQuery := h.db.Order("created_at DESC").Limit(limit)
+
+	if query != "" {
+		// Search in ConfigJSON for the target URL or listen port
+		dbQuery = dbQuery.Where("ConfigJSON LIKE ?", "%"+query+"%")
+	}
+
+	if err := dbQuery.Find(&configs).Error; err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to fetch config history", err)
+		return
+	}
+
+	// Parse ConfigJSON for each row to make it easier for the frontend
+	type HistoryItem struct {
+		ID            string    `json:"id"`
+		CreatedAt     time.Time `json:"created_at"`
+		ParsedConfig  any       `json:"parsed_config"`
+		SourcePath    string    `json:"source_path"`
+		Cwd           string    `json:"cwd"`
+	}
+
+	history := make([]HistoryItem, 0, len(configs))
+	for _, c := range configs {
+		var parsed any
+		_ = json.Unmarshal([]byte(c.ConfigJSON), &parsed)
+		history = append(history, HistoryItem{
+			ID:           c.ID,
+			CreatedAt:    c.CreatedAt,
+			ParsedConfig: parsed,
+			SourcePath:   c.SourcePath,
+			Cwd:          c.Cwd,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, history)
 }
 
 // handleCurrentConfigs returns the currently active proxy configurations

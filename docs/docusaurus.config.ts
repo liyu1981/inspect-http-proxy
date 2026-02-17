@@ -61,9 +61,9 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'ihpp',
+      title: 'Inspect HTTP Proxy Plus',
       logo: {
-        alt: 'ihpp Logo',
+        alt: 'Inspect HTTP Proxy Plus Logo',
         src: 'img/logo.svg',
       },
       items: [
@@ -88,7 +88,7 @@ const config: Config = {
           items: [
             {
               label: 'Getting Started',
-              to: '/docs/intro',
+              to: '/',
             },
           ],
         },

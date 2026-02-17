@@ -25,18 +25,12 @@ For detailed guides, installation instructions, and feature overviews, visit our
 -   **CURL Export:** Quickly copy any captured request as a `curl` command for terminal reproduction.
 -   **Bookmarks:** Save important requests for quick access later.
 
-## 🛠 Tech Stack
-
--   **Backend:** Go, Echo (Web Framework), SQLite (with FTS5), Mattn Go-SQLite3.
--   **Frontend:** Next.js (TypeScript), Tailwind CSS, Shadcn UI, Jotai (State Management).
--   **Persistence:** Local SQLite database for settings, bookmarks, and traffic logs.
-
 ## 📦 Installation
 
-### Recommended: Pre-built Binaries
+### Pre-built Binaries
 Download the latest version for your platform from the [Releases](https://github.com/liyu1981/inspect-http-proxy-plus/releases) page.
 
-### Recommended: Go Install
+### Go Install
 You can install `ihpp` directly using Go:
 
 ```bash

@@ -10,10 +10,10 @@ BOLD='\033[1m'
 DIM='\033[2m'
 
 # Default selections (all enabled)
-selected=(1 1)
+selected=(1 1 1)
 current=0
-services=("Frontend" "Proxy")
-scripts=("./scripts/start_dev_frontend.sh" "./scripts/start_dev_proxy.sh")
+services=("Frontend" "Proxy" "Documentation")
+scripts=("./scripts/start_dev_frontend.sh" "./scripts/start_dev_proxy.sh" "./scripts/start_dev_doc.sh")
 
 # Hide cursor
 tput civis

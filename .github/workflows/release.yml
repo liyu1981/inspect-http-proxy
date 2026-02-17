@@ -11,17 +11,44 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [linux]
-        goarch: [amd64, arm64]
+        include:
+          - goos: linux
+            goarch: amd64
+            os: ubuntu-latest
+          - goos: linux
+            goarch: arm64
+            os: ubuntu-latest
+          - goos: windows
+            goarch: amd64
+            os: ubuntu-latest
+          - goos: darwin
+            goarch: arm64
+            os: macos-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Cross-Compilers (Ubuntu)
+        if: runner.os == 'Linux' && (matrix.goarch == 'arm64' || matrix.goos == 'windows')
+        run: |
+          sudo apt-get update
+          if [ "${{ matrix.goarch }}" = "arm64" ]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu
+          fi
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            sudo apt-get install -y gcc-mingw-w64
+          fi
+
       - name: Update version in Go constants
+        shell: bash
         run: |
           VERSION=${{ github.ref_name }}
-          sed -i "s/const Version = \"dev\"/const Version = \"$VERSION\"/" pkg/core/constants.go
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' "s/const Version = \"dev\"/const Version = \"$VERSION\"/" pkg/core/constants.go
+          else
+            sed -i "s/const Version = \"dev\"/const Version = \"$VERSION\"/" pkg/core/constants.go
+          fi
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -49,23 +76,34 @@ jobs:
           ./scripts/build_and_copy_frontend.sh
 
       - name: Build Backend
+        shell: bash
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          # CGO_ENABLED: 0 # never set CGO_ENABLED=0, otherwise the fts5 tag won't work
+          CGO_ENABLED: 1
         run: |
-          go build -tags fts5 -ldflags="-s -w" -o ihpp-${{ matrix.goarch }} ./cmd/proxy/main.go
+          if [ "${{ matrix.goos }}" = "linux" ] && [ "${{ matrix.goarch }}" = "arm64" ]; then
+            export CC=aarch64-linux-gnu-gcc
+          elif [ "${{ matrix.goos }}" = "windows" ]; then
+            export CC=x86_64-w64-mingw32-gcc
+          fi
+          
+          EXT=""
+          if [ "${{ matrix.goos }}" = "windows" ]; then EXT=".exe"; fi
+          
+          go build -tags fts5 -ldflags="-s -w" -o ihpp${EXT} ./cmd/proxy/main.go
 
       - name: Package
+        shell: bash
         run: |
-          # Rename the binary to 'ihpp' for the archive
-          mv ihpp-${{ matrix.goarch }} ihpp
-          tar -czvf inspect-http-proxy-plus-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz ihpp LICENSE README.md .proxy.config.toml.example
+          EXT=""
+          if [ "${{ matrix.goos }}" = "windows" ]; then EXT=".exe"; fi
+          tar -czvf inspect-http-proxy-plus-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz ihpp${EXT} LICENSE README.md .proxy.config.toml.example
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: inspect-http-proxy-plus-${{ matrix.goarch }}
+          name: inspect-http-proxy-plus-${{ matrix.goos }}-${{ matrix.goarch }}
           path: inspect-http-proxy-plus-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
 
   release:

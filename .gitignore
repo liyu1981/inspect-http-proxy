@@ -1,3 +1,5 @@
+dist
+bin
 ihpp
 .proxy.config.toml
 *.db

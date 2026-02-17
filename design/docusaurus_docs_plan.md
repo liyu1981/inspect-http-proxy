@@ -46,9 +46,14 @@ The documentation will be split into several logical sections:
 - Extract technical details from `design/*.md` files into the "Architecture" section.
 - Create new screenshots and GIFs for the Features section.
 
-### Step 3: Integration
+### Step 3: GitHub Pages Publishing
+- **Configuration**: Set `url`, `baseUrl`, `organizationName`, and `projectName` in `docusaurus.config.ts`.
+- **Deployment Strategy**: Use GitHub Actions for automated deployment to the `gh-pages` branch.
+- **Workflow**: Create `.github/workflows/deploy-docs.yml` to build and deploy on every push to the `master` branch.
+
+### Step 4: Integration
 - Add a script `scripts/build_docs.sh` to handle documentation builds.
-- (Optional) Update `README.md` to link to the deployed documentation site.
+- Update `README.md` to link to the live documentation URL (e.g., `https://liyu1981.github.io/inspect-http-proxy-plus/`).
 
 ## 4. Documentation Structure (`docs/`)
 ```text
@@ -79,7 +84,43 @@ docs/
 - **Code Blocks**: Syntax highlighting for Go, TypeScript, JSON, and TOML.
 - **Admonitions**: Use "Tips" and "Warnings" for proxy configuration gotchas.
 
-## 6. Next Steps (Actionable Items)
+## 6. GitHub Actions Workflow (Draft)
+```yaml
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'docs/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install dependencies
+        run: cd docs && pnpm install
+      - name: Build and Deploy
+        run: |
+          cd docs
+          pnpm run build
+        env:
+          USE_SSH: true
+          GIT_USER: git
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/build
+          publish_branch: gh-pages
+```
+
+## 7. Next Steps (Actionable Items)
 1. Initialize Docusaurus.
 2. Draft the "Getting Started" and "Core Features" pages.
 3. Consolidate design docs into the "Architecture" section.
+4. Configure GitHub Pages and the deployment workflow.

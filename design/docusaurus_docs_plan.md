@@ -13,11 +13,17 @@ The documentation will be split into several logical sections:
 
 ### B. Features Guide (User Focus)
 - **Multi-Proxy Management**: How to create and manage multiple targets.
+  - *[Screenshot Placeholder: Proxy Management Dashboard / Create Proxy Modal]*
 - **Web UI Dashboard**: Navigating the real-time stream, history, and bookmarks.
+  - *[Screenshot Placeholder: Main Dashboard with active traffic stream]*
 - **Traffic Inspection**: Decompression, pretty-printing, and header filtering.
+  - *[Screenshot Placeholder: Detailed Request/Response Viewer]*
 - **Request Builder**: Composing and replaying requests (including multipart/form-data).
+  - *[Screenshot Placeholder: Request Builder Form with complex data]*
 - **Search & Filtering**: Utilizing FTS5 for deep traffic analysis.
+  - *[Screenshot Placeholder: Search interface with filtered results]*
 - **Exporting**: `curl` export and TOML configuration management.
+  - *[Screenshot Placeholder: Export button and curl code snippet]*
 
 ### C. Advanced Usage (Power User Focus)
 - **CLI Reference**: Exhaustive list of flags and environment variables.

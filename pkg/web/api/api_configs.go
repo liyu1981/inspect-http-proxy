@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/liyu1981/inspect-http-proxy/pkg/core"
+	"github.com/liyu1981/inspect-http-proxy-plus/pkg/core"
 	"github.com/spf13/viper"
 )
 

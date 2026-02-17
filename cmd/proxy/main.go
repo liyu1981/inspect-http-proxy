@@ -15,8 +15,8 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
-	"github.com/liyu1981/inspect-http-proxy/pkg/core"
-	"github.com/liyu1981/inspect-http-proxy/pkg/web"
+	"github.com/liyu1981/inspect-http-proxy-plus/pkg/core"
+	"github.com/liyu1981/inspect-http-proxy-plus/pkg/web"
 )
 
 const version = "v0.1.0"
@@ -31,7 +31,7 @@ func initFlags() {
 	pflag.StringSlice("proxy", []string{}, "Proxy configuration in format 'listen_port,target[,truncate]' (can be specified multiple times)")
 
 	pflag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Inspect HTTP Proxy - A simple proxy to inspect and log HTTP requests.\n\n")
+		fmt.Fprintf(os.Stderr, "Inspect HTTP Proxy Plus - A simple proxy to inspect and log HTTP requests.\n\n")
 		fmt.Fprintf(os.Stderr, "Usage:\n  %s [options]\n\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		pflag.PrintDefaults()
@@ -175,7 +175,7 @@ func main() {
 	pflag.Parse()
 
 	if ver, _ := pflag.CommandLine.GetBool("version"); ver {
-		fmt.Printf("Inspect HTTP Proxy version %s\n", version)
+		fmt.Printf("Inspect HTTP Proxy Plus version %s\n", version)
 		return
 	}
 

@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build Release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux]
+        goarch: [amd64, arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          pnpm install
+
+      - name: Build Frontend
+        run: |
+          ./scripts/build_and_copy_frontend.sh
+
+      - name: Build Backend
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          go build -tags fts5 -ldflags="-s -w" -o ihpp-${{ matrix.goarch }} ./cmd/proxy/main.go
+
+      - name: Package
+        run: |
+          # Rename the binary to 'ihpp' for the archive
+          mv ihpp-${{ matrix.goarch }} ihpp
+          tar -czvf inspect-http-proxy-plus-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz ihpp LICENSE README.md .proxy.config.toml.example
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: inspect-http-proxy-plus-${{ matrix.goarch }}
+          path: inspect-http-proxy-plus-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.tar.gz
+          draft: false
+          prerelease: false
+          generate_release_notes: true

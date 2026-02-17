@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/liyu1981/inspect-http-proxy/migrations"
+	"github.com/liyu1981/inspect-http-proxy-plus/migrations"
 	"github.com/rs/zerolog/log"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

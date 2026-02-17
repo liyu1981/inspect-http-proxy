@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/liyu1981/inspect-http-proxy/pkg/core"
+	"github.com/liyu1981/inspect-http-proxy-plus/pkg/core"
 	"github.com/rs/zerolog/log"
 )
 

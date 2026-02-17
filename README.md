@@ -1,6 +1,6 @@
-# Inspect HTTP Proxy
+# Inspect HTTP Proxy Plus
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/signeen/inspect-http-proxy)](https://goreportcard.com/report/github.com/signeen/inspect-http-proxy)
+[![Go Report Card](https://goreportcard.com/badge/github.com/liyu1981/inspect-http-proxy-plus)](https://goreportcard.com/report/github.com/liyu1981/inspect-http-proxy-plus)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 A simple yet powerful Go-based reverse HTTP proxy designed for detailed inspection of requests and responses. It logs traffic to the console with colorization, automatic decompression, and formatting for common content types, while remaining transparent to the client application.
@@ -40,14 +40,14 @@ Ideal for debugging API interactions, understanding middleware behavior, or simp
 You can install the proxy directly using `go install`:
 
 ```bash
-go install github.com/signeen/inspect-http-proxy@latest
+go install github.com/liyu1981/inspect-http-proxy-plus@latest
 ```
 
 Alternatively, you can clone the repository and build it manually:
 
 ```bash
-git clone https://github.com/signeen/inspect-http-proxy.git
-cd inspect-http-proxy
+git clone https://github.com/liyu1981/inspect-http-proxy-plus.git
+cd inspect-http-proxy-plus
 go build
 ```
 
@@ -56,7 +56,7 @@ go build
 Run the proxy from your terminal, specifying the target URL.
 
 ```bash
-inspect-http-proxy -target <target-url> [flags]
+ihpp -target <target-url> [flags]
 ```
 
 **Flags:**
@@ -69,19 +69,19 @@ inspect-http-proxy -target <target-url> [flags]
 
 1.  **Proxy to a local backend API:**
     ```bash
-    inspect-http-proxy -target http://localhost:8080
+    ihpp -target http://localhost:8080
     ```
     Now send requests to `http://localhost:20003` instead of `http://localhost:8080`.
 
 2.  **Listen on a different port and proxy to HTTPS:**
     ```bash
-    inspect-http-proxy -listen :9999 -target https://jsonplaceholder.typicode.com
+    ihpp -listen :9999 -target https://jsonplaceholder.typicode.com
     ```
     Send requests to `http://localhost:9999`.
 
 3.  **Proxy and truncate long log bodies:**
     ```bash
-    inspect-http-proxy -target http://my-verbose-api:5000 -truncate-log-body
+    ihpp -target http://my-verbose-api:5000 -truncate-log-body
     ```
 
 ## Example Output

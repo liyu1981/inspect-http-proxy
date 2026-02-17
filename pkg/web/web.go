@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/liyu1981/inspect-http-proxy/pkg/core"
-	"github.com/liyu1981/inspect-http-proxy/pkg/web/api"
+	"github.com/liyu1981/inspect-http-proxy-plus/pkg/core"
+	"github.com/liyu1981/inspect-http-proxy-plus/pkg/web/api"
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )

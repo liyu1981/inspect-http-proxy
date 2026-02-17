@@ -1,6 +1,6 @@
 # SQLite FTS5 Integration Plan
 
-This plan outlines the steps to integrate SQLite Full-Text Search (FTS5) into the `inspect-http-proxy` project to provide powerful search capabilities across HTTP sessions.
+This plan outlines the steps to integrate SQLite Full-Text Search (FTS5) into the `inspect-http-proxy-plus` project to provide powerful search capabilities across HTTP sessions.
 
 ## 1. Goal
 Enable high-performance, full-text search for HTTP sessions, including:

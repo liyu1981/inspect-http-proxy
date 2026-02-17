@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/liyu1981/inspect-http-proxy/migrations"
+	"github.com/liyu1981/inspect-http-proxy-plus/migrations"
 )
 
 // must run as: go run --tags fts5 ./cmd/migrate/main.go

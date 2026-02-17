@@ -1,4 +1,4 @@
-module github.com/liyu1981/inspect-http-proxy
+module github.com/liyu1981/inspect-http-proxy-plus
 
 go 1.24.1
 

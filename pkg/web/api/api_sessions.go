@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/liyu1981/inspect-http-proxy/pkg/core"
+	"github.com/liyu1981/inspect-http-proxy-plus/pkg/core"
 )
 
 // handleRecentSessions returns recent sessions for a specific config

@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/liyu1981/inspect-http-proxy/pkg/core"
+	"github.com/liyu1981/inspect-http-proxy-plus/pkg/core"
 )
 
 // handleMethodStats returns session count statistics grouped by HTTP method

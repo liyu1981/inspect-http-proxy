@@ -2,4 +2,4 @@
 set -e
 
 cd docs
-pnpm start --port 3000
+pnpm start --port 20001

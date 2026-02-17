@@ -1,178 +1,78 @@
-# Inspect HTTP Proxy Plus
+# Inspect HTTP Proxy Plus (ihpp)
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/liyu1981/inspect-http-proxy-plus)](https://goreportcard.com/report/github.com/liyu1981/inspect-http-proxy-plus)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-A simple yet powerful Go-based reverse HTTP proxy designed for detailed inspection of requests and responses. It logs traffic to the console with colorization, automatic decompression, and formatting for common content types, while remaining transparent to the client application.
+**Inspect HTTP Proxy Plus (`ihpp`)** is a powerful, developer-centric reverse HTTP proxy and traffic inspector. It combines a high-performance Go backend with a modern Next.js web interface to provide real-time visibility, persistent history, and request manipulation capabilities for your HTTP traffic.
 
-Ideal for debugging API interactions, understanding middleware behavior, or simply getting a clear view of HTTP traffic flow.
+Whether you are debugging complex microservices, reverse-engineering APIs, or testing frontend integrations, `ihpp` provides the tools you need in a single, lightweight binary.
 
-## Key Features
+## 🚀 Key Features
 
-*   **Simple Reverse HTTP Proxy:** Forwards traffic from a local port to a specified target URL.
-*   **Detailed Console Logging:** Logs essential information for each request/response pair:
-    *   Timestamp
-    *   Client IP Address
-    *   Request Method, URL (Path + Query), Protocol
-    *   Request & Response Headers (with sensitive header omission/redaction)
-    *   Request & Response Body
-    *   Response Status Code & Status Text
-    *   Request Duration
-*   **Automatic Response Body Decompression (for Logging):** Automatically decompresses `gzip`, `br` (Brotli), and `deflate` encoded response bodies before logging, allowing you to see the actual content easily.
-*   **Pretty-Printing & Colorization:**
-    *   Formats and colorizes JSON request/response bodies for improved readability.
-    *   Formats and colorizes `application/x-www-form-urlencoded` bodies.
-    *   Color-codes status codes, methods, headers, and other log elements.
-*   **Transparent Forwarding:** The proxy forwards the *original* response body (compressed or uncompressed) and headers received from the target server back to the client. Decompression/formatting is *only* for the console log.
-*   **Configurable:**
-    *   Set the listening address/port (`-listen`).
-    *   Set the target server URL (`-target`).
-    *   Optionally truncate the logged body output to a specific size (`-truncate-log-body`).
-*   **Safe Logging:**
-    *   Redacts the `Authorization` header value in logs.
-    *   Omits common, noisy proxy/CDN headers from the log output by default.
-*   **Correct Proxy Behavior:**
-    *   Handles hop-by-hop headers correctly.
-    *   Adds standard `X-Forwarded-For`, `X-Forwarded-Proto`, and `X-Forwarded-Host` headers to the request sent to the target.
+-   **Multi-Proxy Management:** Run and manage multiple proxy configurations simultaneously from a single dashboard.
+-   **Real-time Inspection:** Watch HTTP requests and responses flow through in real-time via WebSockets.
+-   **Persistent History:** All proxied traffic is stored in a local SQLite database with Full-Text Search (FTS5) support, allowing you to find that one specific request from days ago.
+-   **Modern Web UI:** A polished, responsive dashboard built with React (Next.js) and Tailwind CSS, featuring:
+    -   Detailed request/response body viewers with syntax highlighting (JSON, HTML, XML, etc.).
+    -   Header inspection and filtering.
+    -   Response time tracking.
+-   **HTTP Request Builder:** Replay, modify, and compose new HTTP requests directly from the UI.
+-   **Traffic Analysis:** Automatic decompression (`gzip`, `br`, `deflate`) and pretty-printing of common content types.
+-   **CURL Export:** Quickly copy any captured request as a `curl` command for terminal reproduction.
+-   **Bookmarks:** Save important requests for quick access later.
 
-## Installation
+## 🛠 Tech Stack
 
-You can install the proxy directly using `go install`:
+-   **Backend:** Go, Echo (Web Framework), SQLite (with FTS5), Mattn Go-SQLite3.
+-   **Frontend:** Next.js (TypeScript), Tailwind CSS, Shadcn UI, Jotai (State Management).
+-   **Persistence:** Local SQLite database for settings, bookmarks, and traffic logs.
+
+## 📦 Installation
+
+### Recommended: Pre-built Binaries
+Download the latest version for your platform from the [Releases](https://github.com/liyu1981/inspect-http-proxy-plus/releases) page.
+
+### Recommended: Go Install
+You can install `ihpp` directly using Go:
 
 ```bash
 go install github.com/liyu1981/inspect-http-proxy-plus@latest
 ```
 
-Alternatively, you can clone the repository and build it manually:
+### From Source
+If you want to build from source, you will need Go 1.22+ and pnpm (for frontend assets).
 
 ```bash
+# Clone the repository
 git clone https://github.com/liyu1981/inspect-http-proxy-plus.git
 cd inspect-http-proxy-plus
-go build
+
+# Build the frontend (requires pnpm)
+./scripts/build_and_copy_frontend.sh
+
+# Build the binary
+./scripts/build.sh
 ```
 
-## Usage
+## 📖 Usage
 
-Run the proxy from your terminal, specifying the target URL.
+Start the proxy server:
 
 ```bash
-ihpp -target <target-url> [flags]
+./ihpp
 ```
 
-**Flags:**
+By default, the web interface will be available at `http://localhost:20003`. From there, you can create new proxy configurations to forward traffic to your target services.
 
-*   `-listen <address:port>`: Address and port for the proxy to listen on. (Default: `:20003`)
-*   `-target <url>`: URL of the target server to forward requests to. (Required, e.g., `http://localhost:8080`, `https://api.example.com`)
-*   `-truncate-log-body`: If set, truncate the logged body output string to a predefined limit (currently 10KB). (Default: `false`)
+### CLI Flags
 
-**Examples:**
+-   `-db <path>`: Path to the SQLite database file (default: `./ihpp.db`).
+-   `-listen <addr>`: Address for the management UI to listen on (default: `:20003`).
 
-1.  **Proxy to a local backend API:**
-    ```bash
-    ihpp -target http://localhost:8080
-    ```
-    Now send requests to `http://localhost:20003` instead of `http://localhost:8080`.
+## 🤝 Contributing
 
-2.  **Listen on a different port and proxy to HTTPS:**
-    ```bash
-    ihpp -listen :9999 -target https://jsonplaceholder.typicode.com
-    ```
-    Send requests to `http://localhost:9999`.
+Contributions are welcome! Please feel free to open an issue or submit a pull request.
 
-3.  **Proxy and truncate long log bodies:**
-    ```bash
-    ihpp -target http://my-verbose-api:5000 -truncate-log-body
-    ```
-
-## Example Output
-
-Here's a sample of what the console output might look like (colors omitted for basic Markdown):
-
-![Screenshot](assets/screenshot.png)
-
-```
---- Incoming Request ---
-Time: 2025-04-04T10:30:01Z
-From: 127.0.0.1:54321
-Request: POST /api/v1/users HTTP/1.1
-Host: localhost:20003
-Query Parameters:
-  source: web
-Request Headers:
-  Accept: application/json
-  Accept-Encoding: gzip, deflate, br
-  Authorization: [REDACTED SHORT]
-  Content-Length: 55
-  Content-Type: application/json
-  User-Agent: curl/7.79.1
-Request Body: (decoded from json for printing)
-  {
-    "email": "test@example.com",
-    "name": "Test User"
-  }
-------------------------
---- Target Response ----
-Status: 201 Created (201)
-Response Headers:
-  Content-Encoding: gzip
-  Content-Type: application/json; charset=utf-8
-  Date: Fri, 04 Apr 2025 10:30:01 GMT
-  Location: /api/v1/users/123
-  Server: Caddy
-  Vary: Accept-Encoding
-Response Body: (decoded from gzip for printing)
-  {
-    "id": "123",
-    "message": "User created successfully",
-    "timestamp": "2025-04-04T10:30:01.500Z"
-  }
-Duration: 55.123456ms
------------------------
-=======================
-
---- Incoming Request ---
-Time: 2025-04-04T10:31:05Z
-From: 127.0.0.1:54322
-Request: GET /api/v1/items?limit=10 HTTP/1.1
-Host: localhost:20003
-Query Parameters:
-  limit: 10
-Request Headers:
-  Accept: */*
-  Accept-Encoding: gzip
-  User-Agent: Wget/1.21.1
-Request Body: (empty)
-------------------------
---- Target Response ----
-Status: 200 OK (200)
-Response Headers:
-  Content-Length: 25000
-  Content-Type: application/json
-  Date: Fri, 04 Apr 2025 10:31:05 GMT
-  Server: nginx
-Response Body: (decoded from json for printing)
-  [
-    {
-      "id": "item1",
-      "value": "..."
-    },
-    {
-      "id": "item2",
-      "value": "..."
-    }
-    // ... more items
-  ]
-  ... (Output truncated for display, original data size 25000 bytes)
-Duration: 12.987654ms
------------------------
-=======================
-```
-
-## Contributing
-
-Contributions are welcome! Please feel free to open an issue to report bugs or suggest features, or submit a pull request with improvements.
-
-## License
+## 📄 License
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
-

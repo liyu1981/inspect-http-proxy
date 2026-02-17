@@ -2,6 +2,10 @@
 
 **Inspect HTTP Proxy Plus (`ihpp`)** is a powerful, developer-centric reverse HTTP proxy and traffic inspector. It combines a high-performance Go backend with a modern Next.js web interface to provide real-time visibility, persistent history, and request manipulation capabilities for your HTTP traffic.
 
+## Project Origin
+
+`ihpp` is a modernized and enhanced version of the original [inspect-http-proxy](https://github.com/liyu1981/inspect-http-proxy) project. While the original was a robust CLI-focused tool, `ihpp` (the "Plus" version) adds a persistent database, a full web UI dashboard, and multi-proxy management to provide a more comprehensive debugging experience.
+
 Whether you are debugging complex microservices, reverse-engineering APIs, or testing frontend integrations, `ihpp` provides the tools you need in a single, lightweight binary.
 
 ## Why ihpp?

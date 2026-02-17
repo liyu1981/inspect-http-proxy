@@ -39,14 +39,6 @@ const sidebars: SidebarsConfig = {
         'advanced/configuration',
       ],
     },
-    {
-      type: 'category',
-      label: 'Architecture',
-      items: [
-        'architecture/overview',
-        'architecture/database',
-      ],
-    },
   ],
 };
 

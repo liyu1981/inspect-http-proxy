@@ -30,13 +30,7 @@ The documentation will be split into several logical sections:
 - **Persistence**: Understanding the SQLite database (`~/.proxy/proxy_logs.db`).
 - **Custom Configuration**: Deep dive into `.proxy.config.toml`.
 
-### D. Architecture & Internals (Developer Focus)
-- **System Overview**: High-level interaction between Go backend and Next.js frontend.
-- **Database Schema**: Explanation of tables (sessions, configs, bookmarks, settings).
-- **API Reference**: Internal REST and WebSocket endpoints.
-- **Background Tasks**: The Reaper (cleanup) and Proxy Server management.
-
-### E. Community & Contribution
+### D. Community & Contribution
 - **Development Setup**: How to run in dev mode (`start_dev.sh`).
 - **Coding Standards**: Go and React conventions used in the project.
 - **Migration Guide**: How to add new DB migrations.
@@ -78,10 +72,6 @@ docs/
 │   ├── advanced/
 │   │   ├── cli-reference.md
 │   │   └── configuration.md
-│   └── architecture/
-│       ├── overview.md
-│       ├── database.md
-│       └── api-reference.md
 └── src/                 # Custom React components/pages
 ```
 
@@ -128,5 +118,4 @@ jobs:
 ## 7. Next Steps (Actionable Items)
 1. Initialize Docusaurus.
 2. Draft the "Getting Started" and "Core Features" pages.
-3. Consolidate design docs into the "Architecture" section.
-4. Configure GitHub Pages and the deployment workflow.
+3. Configure GitHub Pages and the deployment workflow.

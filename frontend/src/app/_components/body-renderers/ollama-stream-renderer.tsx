@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { JsonEditor } from "@/app/_components/json-editor";
 import { cn } from "@/lib/utils";
 import type { BodyRenderer, BodyRendererProps } from "./types";
@@ -65,7 +65,7 @@ const OllamaStreamRendererComponent = ({ body }: BodyRendererProps) => {
 				<div className="text-sm leading-relaxed font-sans">
 					{chunks.map((chunk, index) => (
 						<span
-							key={index}
+							key={`chunk-${index}`}
 							onClick={() => setSelectedIndex(index)}
 							className={cn(
 								"cursor-pointer transition-colors duration-150 decoration-orange-500/30",
@@ -94,13 +94,6 @@ const OllamaStreamRendererComponent = ({ body }: BodyRendererProps) => {
 							<span className="text-[10px] font-bold uppercase text-muted-foreground">
 								Chunk #{selectedIndex + 1} Metadata
 							</span>
-							<button
-								type="button"
-								onClick={() => setSelectedIndex(null)}
-								className="text-[10px] hover:text-orange-600 transition-colors"
-							>
-								Close
-							</button>
 						</div>
 						<div className="flex-1 overflow-auto">
 							<JsonEditor

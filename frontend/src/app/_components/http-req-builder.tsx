@@ -10,7 +10,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { addTabAtom } from "../_jotai/bottom-panel-store";
-import { useGlobal } from "./global-app-context";
 // Jotai Atoms
 import {
   addFormDataEntryAtom,
@@ -32,6 +31,7 @@ import {
   calculateRequestHash,
   updateResponseStateAtom,
 } from "../_jotai/http-res";
+import { useGlobal } from "./global-app-context";
 import { HttpResponseViewer } from "./http-response-viewer";
 import { JsonEditor } from "./json-editor";
 

@@ -2,7 +2,7 @@ import {
   JsonEditor as JsonEditorReact,
   type JsonEditorProps as JsonEditorReactProps,
 } from "json-edit-react";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 
 interface JsonEditorProps {

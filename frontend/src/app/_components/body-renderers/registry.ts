@@ -1,8 +1,8 @@
 "use client";
 
 import { jsonRenderer } from "./json-renderer";
-import { openAiEventStreamRenderer } from "./openai-event-stream-renderer";
 import { ollamaStreamRenderer } from "./ollama-stream-renderer";
+import { openAiEventStreamRenderer } from "./openai-event-stream-renderer";
 import type { BodyRenderer } from "./types";
 
 /** Registered body renderer plugins */

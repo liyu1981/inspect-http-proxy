@@ -15,7 +15,9 @@ const JsonRendererComponent = ({ body }: BodyRendererProps) => {
       </div>
     );
   }
-  return <JsonEditor initialJson={json} rootFontSize={"13px"} viewOnly={true} />;
+  return (
+    <JsonEditor initialJson={json} rootFontSize={"13px"} viewOnly={true} />
+  );
 };
 
 export const jsonRenderer: BodyRenderer = {

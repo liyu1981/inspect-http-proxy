@@ -59,7 +59,10 @@ export function BodySection({ title, body, size, type }: BodySectionProps) {
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           {renderer && (
             <div className="flex items-center gap-2">
-              <Label htmlFor="raw-mode" className="text-[10px] uppercase font-bold text-muted-foreground cursor-pointer">
+              <Label
+                htmlFor="raw-mode"
+                className="text-[10px] uppercase font-bold text-muted-foreground cursor-pointer"
+              >
                 Raw Mode ({renderer.label})
               </Label>
               <Switch

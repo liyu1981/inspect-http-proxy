@@ -125,16 +125,14 @@ export const ollamaStreamRenderer: BodyRenderer = {
 	label: "Ollama Stream",
 	priority: 110,
 	match: (contentType: string, body: string) => {
-		// Match by content type or by looking for NDJSON with ollama-specific fields
+		// Strictly require application/x-ndjson for Ollama streams
 		const isNDJSON = contentType?.includes("application/x-ndjson");
-		if (isNDJSON) return true;
+		if (!isNDJSON) return false;
 
-		// Fallback: sniff content if it looks like Ollama JSON lines
-		if (body.trim().startsWith('{"model":') && body.includes('"created_at":')) {
-			return true;
-		}
-
-		return false;
+		// Additionally verify it looks like an Ollama stream
+		return (
+			body.trim().startsWith('{"model":') && body.includes('"created_at":')
+		);
 	},
 	component: OllamaStreamRendererComponent,
 };

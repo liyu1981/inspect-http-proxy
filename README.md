@@ -5,24 +5,37 @@
 
 **Inspect HTTP Proxy Plus (`ihpp`)** is a powerful, developer-centric reverse HTTP proxy and traffic inspector. It combines a high-performance Go backend with a modern Next.js web interface to provide real-time visibility, persistent history, and request manipulation capabilities for your HTTP traffic.
 
-Whether you are debugging complex microservices, reverse-engineering APIs, or testing frontend integrations, `ihpp` provides the tools you need in a single, lightweight binary.
+> This project is based on the original [project by @signeen](https://github.com/signeen/inspect-http-proxy) (see `README.origin.md`) but has undergone significant improvements and evolved in a different direction, focusing on multi-proxy management, a rich web UI, and persistent SQLite storage with full-text search.
+
+## 🚀 Quick Start
+
+The fastest way to run `ihpp` is using `npx`:
+
+```bash
+npx @liyu1981/ihpp
+```
+
+or 
+```bash
+# in-memory db mode, best for demo or one time usage
+npx @liyu1981/ihpp -m
+```
+
+By default, the web interface will be available at `http://localhost:20000`.
 
 ## 📖 Documentation
 
 For detailed guides, installation instructions, and feature overviews, visit our [Documentation](https://liyu1981.github.io/inspect-http-proxy-plus/).
 
-## 🚀 Key Features
+## ✨ Key Features
 
 -   **Multi-Proxy Management:** Run and manage multiple proxy configurations simultaneously from a single dashboard.
 -   **Real-time Inspection:** Watch HTTP requests and responses flow through in real-time via WebSockets.
--   **Persistent History:** All proxied traffic is stored in a local SQLite database with Full-Text Search (FTS5) support, allowing you to find that one specific request from days ago.
--   **Modern Web UI:** A polished, responsive dashboard built with React (Next.js) and Tailwind CSS, featuring:
-    -   Detailed request/response body viewers with syntax highlighting (JSON, HTML, XML, etc.).
-    -   Header inspection and filtering.
-    -   Response time tracking.
+-   **Persistent History:** All proxied traffic is stored in a local SQLite database with Full-Text Search (FTS5) support.
+-   **Modern Web UI:** A polished, responsive dashboard built with React (Next.js) and Tailwind CSS.
 -   **HTTP Request Builder:** Replay, modify, and compose new HTTP requests directly from the UI.
--   **Traffic Analysis:** Automatic decompression (`gzip`, `br`, `deflate`) and pretty-printing of common content types.
--   **CURL Export:** Quickly copy any captured request as a `curl` command for terminal reproduction.
+-   **Traffic Analysis:** Automatic decompression and pretty-printing of common content types.
+-   **CURL Export:** Quickly copy any captured request as a `curl` command.
 -   **Bookmarks:** Save important requests for quick access later.
 
 ## 📦 Installation
@@ -31,15 +44,11 @@ For detailed guides, installation instructions, and feature overviews, visit our
 Download the latest version for your platform from the [Releases](https://github.com/liyu1981/inspect-http-proxy-plus/releases) page.
 
 ### Go Install
-You can install `ihpp` directly using Go:
-
 ```bash
 go install github.com/liyu1981/inspect-http-proxy-plus@latest
 ```
 
 ### From Source
-If you want to build from source, you will need Go 1.22+ and pnpm (for frontend assets).
-
 ```bash
 # Clone the repository
 git clone https://github.com/liyu1981/inspect-http-proxy-plus.git
@@ -52,15 +61,17 @@ cd inspect-http-proxy-plus
 ./scripts/build.sh
 ```
 
-## 📖 Usage
+## 🛠️ Development
 
-Start the proxy server:
+To start the development environment (backend and frontend with hot-reload):
 
 ```bash
-./ihpp
+./start_dev.sh
 ```
 
-By default, the web interface will be available at `http://localhost:20003`. From there, you can create new proxy configurations to forward traffic to your target services.
+This script will concurrently run the Go backend and the Next.js frontend, allowing for a seamless development experience.
+
+## 📖 Usage
 
 ### CLI Flags
 

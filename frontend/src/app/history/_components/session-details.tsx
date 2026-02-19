@@ -51,9 +51,9 @@ export function SessionDetails({ id }: SessionDetailsProps) {
   const [bookmarked, setBookmarked] = useState(false);
   const resetRequest = useSetAtom(resetRequestAtom);
 
-  const selectedConfig = allConfigs.find(
-    (config) => config.id === selectedConfigId,
-  );
+  const selectedConfig = Array.isArray(allConfigs)
+    ? allConfigs.find((config) => config.id === selectedConfigId)
+    : undefined;
   const selectedConfigObj = JSON.parse(
     selectedConfig?.config_row.ConfigJSON || "{}",
   );

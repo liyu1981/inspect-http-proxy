@@ -1,5 +1,5 @@
 {
-  "name": "@liyu1981/inspect-http-proxy-plus",
+  "name": "@liyu1981/ihpp",
   "version": "0.0.0-dev",
   "description": "A powerful HTTP/HTTPS proxy with traffic inspection, full-text search, and request builder.",
   "main": "bin/index.js",

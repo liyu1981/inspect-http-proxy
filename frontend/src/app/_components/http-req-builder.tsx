@@ -78,7 +78,9 @@ export default function HttpReqBuilder() {
     // If url doesn't have scheme and host, default to localhost with current listen port
     if (!url.startsWith("http://") && !url.startsWith("https://")) {
       // Find the first active proxy configuration to get its listen port
-      const activeProxy = allConfigs.find((c) => c.is_proxyserver_active);
+      const activeProxy = Array.isArray(allConfigs)
+        ? allConfigs.find((c) => c.is_proxyserver_active)
+        : undefined;
       let port = "20003"; // fallback
 
       if (activeProxy) {

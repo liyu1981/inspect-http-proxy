@@ -39,13 +39,13 @@ export function ConfigSelector({
   selectedConfigId,
   onConfigChange,
 }: ConfigSelectorProps) {
+  if (!Array.isArray(configs) || configs.length === 0) {
+    return null;
+  }
+
   const selectedConfig = configs.find(
     (c) => c.config_row.ID === selectedConfigId,
   );
-
-  if (configs.length === 0) {
-    return null;
-  }
 
   return (
     <DropdownMenu>

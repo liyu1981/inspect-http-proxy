@@ -116,15 +116,7 @@ func (h *ApiHandler) handleCurrentConfigs(w http.ResponseWriter, r *http.Request
 	// Retrieve active IDs from the global thread-safe store
 	activeIDs := core.GlobalVar.ConfigGetAll()
 
-	if len(activeIDs) == 0 {
-		writeJSON(w, http.StatusOK, map[string]any{
-			"count":   0,
-			"configs": []any{},
-		})
-		return
-	}
-
-	var fullConfigs []any
+	var fullConfigs []any = make([]any, 0)
 
 	// Fetch full data for each active ID from database
 	for _, id := range activeIDs {

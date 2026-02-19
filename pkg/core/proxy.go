@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -234,6 +235,7 @@ func StartProxyServer(
 	targetURLParsed, err := url.Parse(proxyEntry.Target)
 	if err != nil || targetURLParsed.Scheme == "" {
 		if index != -1 {
+			fmt.Fprintf(os.Stderr, "FATAL: Invalid target URL in proxy entry at index %d: %s\n", index, proxyEntry.Target)
 			log.Fatal().
 				Int("index", index).
 				Str("target", proxyEntry.Target).
@@ -247,6 +249,7 @@ func StartProxyServer(
 	// Validate listen address
 	if proxyEntry.Listen == "" {
 		if index != -1 {
+			fmt.Fprintf(os.Stderr, "FATAL: Missing 'listen' address in proxy entry at index %d\n", index)
 			log.Fatal().
 				Int("index", index).
 				Msg("Missing 'listen' address in proxy entry")

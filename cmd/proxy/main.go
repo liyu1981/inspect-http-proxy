@@ -194,6 +194,7 @@ func main() {
 	// 2. Unmarshal into typed SysConfig struct
 	var sysConfig core.SysConfig
 	if err := viper.Unmarshal(&sysConfig); err != nil {
+		fmt.Fprintf(os.Stderr, "FATAL: Failed to unmarshal system configuration: %v\n", err)
 		log.Fatal().Err(err).Msg("Failed to unmarshal system configuration")
 	}
 
@@ -206,6 +207,7 @@ func main() {
 	// Use resolved settings from config/flags for bootstrap
 	db, err := core.InitDatabase(sysConfig.DBPath)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "FATAL: Database initialization failed: %v\n", err)
 		log.Fatal().Err(err).Msg("Database initialization failed")
 	}
 
@@ -272,6 +274,7 @@ func main() {
 		for i, proxyStr := range proxyFlags {
 			entry, err := parseProxyFlag(proxyStr, i)
 			if err != nil {
+				fmt.Fprintf(os.Stderr, "FATAL: Failed to parse proxy flag '%s': %v\n", proxyStr, err)
 				log.Fatal().Err(err).Str("proxy", proxyStr).Msg("Failed to parse proxy flag")
 			}
 			sysConfig.Proxies = append(sysConfig.Proxies, entry)

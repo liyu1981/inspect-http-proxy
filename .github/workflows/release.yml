@@ -60,7 +60,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -97,15 +97,16 @@ jobs:
       - name: Package
         shell: bash
         run: |
+          VERSION=${{ github.ref_name }}
           EXT=""
           if [ "${{ matrix.goos }}" = "windows" ]; then EXT=".exe"; fi
-          tar -czvf inspect-http-proxy-plus-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz ihpp${EXT} LICENSE README.md .proxy.config.toml.example
+          tar -czvf inspect-http-proxy-plus-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz ihpp${EXT} LICENSE README.md .proxy.config.toml.example
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: inspect-http-proxy-plus-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: inspect-http-proxy-plus-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+          name: inspect-http-proxy-plus-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: inspect-http-proxy-plus-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
 
   release:
     name: Create Release
@@ -134,7 +135,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write   # REQUIRED for OIDC
+      id-token: write
 
     steps:
       - name: Checkout code
@@ -143,9 +144,8 @@ jobs:
       - name: Set up Node.js for npm registry
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
-          scope: '@liyu1981'
 
       - name: Update version and sync package.json
         shell: bash

@@ -34,8 +34,8 @@ if (!os || !arch) {
 }
 
 const version = pkg.version;
-// Release artifacts named like: inspect-http-proxy-plus-linux-amd64.tar.gz
-const tarballName = `inspect-http-proxy-plus-${os}-${arch}.tar.gz`;
+// Release artifacts named like: inspect-http-proxy-plus-v1.0.4-linux-amd64.tar.gz
+const tarballName = `inspect-http-proxy-plus-v${version}-${os}-${arch}.tar.gz`;
 const url = `https://github.com/liyu1981/inspect-http-proxy-plus/releases/download/v${version}/${tarballName}`;
 
 console.log(`Downloading binary from: ${url}`);

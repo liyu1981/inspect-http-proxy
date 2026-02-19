@@ -1,3 +1,4 @@
+- Repository: git@github.com:liyu1981/inspect-http-proxy-plus.git
 - Skip the identify build step with golang
 - In golang, do not use interface{}, use any instead
 - ResizablePanel should use percentage strings for defaultSize/minSize/maxSize, e.g., defaultSize={"40%"}
@@ -8,3 +9,4 @@
 - use `scripts/build_and_copy_frontend.sh` to build frontend
 - NEVER do git commit unless the user explicitly tells you to
 - CGO is necessary as we need fts5 support for sqlite3
+- Do NOT scan the `design` folder for pending tasks or issues; only rely on GitHub issues or explicit user instructions.

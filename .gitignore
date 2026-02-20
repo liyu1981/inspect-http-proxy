@@ -13,6 +13,7 @@ proxy_server
 .windsurf/
 .agents/
 tmp/
+worktrees/
 
 # File created using '.gitignore Generator' for Visual Studio Code: https://bit.ly/vscode-gig
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode,linux,go,nextjs,node

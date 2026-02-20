@@ -1,10 +1,10 @@
-name: Go Tests
+name: Tests
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ '**' ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ '**' ]
 
 jobs:
   test:
@@ -20,9 +20,6 @@ jobs:
           go-version: '1.24'
           cache: true
 
-      - name: Install dependencies
-        run: go mod download
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -32,13 +29,51 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: 9
+          run_install: false
 
-      - name: Build Frontend
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: |
+          go mod download
+          cd frontend && pnpm install
+
+      - name: Check Go Formatting
+        run: |
+          if [ "$(gofmt -l . | wc -l)" -gt 0 ]; then
+            echo "Go code is not formatted. Run 'go fmt ./...'"
+            gofmt -d .
+            exit 1
+          fi
+
+      - name: Check Go mod tidy
+        run: |
+          go mod tidy
+          if [ -n "$(git status --porcelain go.mod go.sum)" ]; then
+            echo "go.mod or go.sum is not tidy. Run 'go mod tidy'"
+            git diff go.mod go.sum
+            exit 1
+          fi
+
+      - name: Lint Frontend
         run: |
           cd frontend
-          pnpm install
-          cd ..
-          ./scripts/build_and_copy_frontend.sh
+          pnpm lint
+
+      - name: Build Frontend
+        run: ./scripts/build_and_copy_frontend.sh
 
       - name: Run Go Tests
         run: ./scripts/run_tests.sh

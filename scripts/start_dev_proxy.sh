@@ -1,1 +1,1 @@
-APP_ENV=development air .
+APP_ENV=development air

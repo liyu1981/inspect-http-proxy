@@ -42,10 +42,22 @@ fetch_issues() {
 draw_list() {
     local selected=$1
     local count=$2
-    shift 2
+    local start_index=$3
+    shift 3
     local list=("$@")
+    
+    # Get terminal height
+    local term_height=$(tput lines)
+    # Header takes 5 lines, footer (if any) could take some too.
+    # Let's use max 15 items to be safe and avoid scrolling.
+    local max_items=$((term_height - 10))
+    if [ $max_items -lt 5 ]; then max_items=5; fi
+    
+    # Ensure selected is within the visible window
+    # This logic is handled in the main loop now for better control
 
-    # Clear screen from cursor down to ensure clean redraw
+    # Clear screen from top left
+    tput cup 0 0
     tput ed
 
     echo "${BLUE}${BOLD}==================================================${NORMAL}"
@@ -54,7 +66,10 @@ draw_list() {
     echo " ${YELLOW}Press 'r' to refetch, 'q' to quit${NORMAL}"
     echo "${BLUE}${BOLD}==================================================${NORMAL}"
 
-    for i in "${!list[@]}"; do
+    local end_index=$((start_index + max_items))
+    [ $end_index -gt $count ] && end_index=$count
+
+    for ((i=start_index; i<end_index; i++)); do
         if [ $i -eq $selected ]; then
             # Highlight selected row
             echo "${GREEN}${REVERSE}> ${list[$i]}${NORMAL}"
@@ -62,36 +77,57 @@ draw_list() {
             echo "  ${list[$i]}"
         fi
     done
+    
+    # If there are more issues, show indicator
+    if [ $end_index -lt $count ]; then
+        echo "  ${YELLOW}... and $((count - end_index)) more ...${NORMAL}"
+    fi
+    if [ $start_index -gt 0 ]; then
+        echo "  ${YELLOW}... and $start_index more above ...${NORMAL}"
+    fi
 }
 
 cleanup() {
     tput cnorm # Show cursor
-    tput rc    # Restore cursor position
-    tput ed    # Clear following text
+    tput rmcup # Restore screen buffer
 }
 
 # Trap for unexpected exits
 trap "cleanup; exit" INT TERM
 
+# Enter alternate screen buffer
+tput smcup
+
 while true; do
     if ! fetch_issues; then
+        tput rmcup
         exit 0
     fi
 
     selected=0
+    start_index=0
     count=${#issues[@]}
 
-    # Hide cursor and save position
+    # Hide cursor
     tput civis
-    tput sc
 
     # Handle input
     while true; do
-        tput rc # Restore cursor to saved position
-        draw_list "$selected" "$count" "${issues[@]}"
+        # Calculate start_index for scrolling
+        # Get terminal height again in case it resized
+        term_height=$(tput lines)
+        max_items=$((term_height - 10))
+        [ $max_items -lt 5 ] && max_items=5
+
+        if [ $selected -lt $start_index ]; then
+            start_index=$selected
+        elif [ $selected -ge $((start_index + max_items)) ]; then
+            start_index=$((selected - max_items + 1))
+        fi
+
+        draw_list "$selected" "$count" "$start_index" "${issues[@]}"
 
         # Read input
-        # -r: raw, -s: silent, -n1: one character
         read -rsn1 key
         
         # Handle escape sequences (arrows)
@@ -112,12 +148,17 @@ while true; do
             echo "Exiting."
             exit 0
         elif [[ "$key" == "r" ]]; then
-            cleanup
+            # Clean up before refetching because fetch_issues prints to stdout
+            # which we might want to see, or we might want to stay in smcup.
+            # Let's stay in smcup but clear screen.
+            tput cup 0 0
+            tput ed
             echo "${CYAN}Refetching...${NORMAL}"
             break # Break inner loop to refetch
         elif [[ "$key" == "" ]]; then # Enter
-            cleanup
+            # Save selection before cleanup
             selected_issue="${issues[$selected]}"
+            cleanup
             
             # Extract issue number (first column) and title (rest of the line)
             ISSUE_NUMBER=$(echo "$selected_issue" | awk '{print $1}')
@@ -147,6 +188,19 @@ while true; do
             echo "To start working:"
             echo "  ${CYAN}cd $WORKTREE_PATH${NORMAL}"
             echo "  ${CYAN}scripts/prepare_dev.sh${NORMAL}"
+            echo ""
+
+            read -p "Do you want to cd to $WORKTREE_PATH and run prepare_dev.sh now? (y/n) " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                cd "$WORKTREE_PATH" || exit 1
+                echo "${CYAN}Running prepare_dev.sh...${NORMAL}"
+                bash ./scripts/prepare_dev.sh
+                echo ""
+                echo "${GREEN}${BOLD}Preparation complete!${NORMAL}"
+                echo "${YELLOW}Starting a new shell in $WORKTREE_PATH. Type 'exit' to return to the original directory.${NORMAL}"
+                exec $SHELL
+            fi
             exit 0
         fi
     done

@@ -192,12 +192,32 @@ while true; do
 
             read -p "Do you want to cd to $WORKTREE_PATH and run prepare_dev.sh now? (y/n) " -n 1 -r
             echo
+            PREPARED=false
             if [[ $REPLY =~ ^[Yy]$ ]]; then
                 cd "$WORKTREE_PATH" || exit 1
                 echo "${CYAN}Running prepare_dev.sh...${NORMAL}"
                 bash ./scripts/prepare_dev.sh
                 echo ""
                 echo "${GREEN}${BOLD}Preparation complete!${NORMAL}"
+                PREPARED=true
+            fi
+
+            read -p "Do you want to start gemini work on it? (y/n) " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                if [ "$PREPARED" = false ]; then
+                    cd "$WORKTREE_PATH" || exit 1
+                fi
+                echo "${CYAN}Fetching issue title and body...${NORMAL}"
+                ISSUE_INFO=$(gh issue view "$ISSUE_NUMBER" --json title,body --template '{{.title}}\n\n{{.body}}')
+                echo "${CYAN}Starting gemini with pre-filled prompt (press Enter to submit)...${NORMAL}"
+                # Use read -e -i to pre-fill the input buffer (requires bash)
+                read -e -p "Prompt: " -i "$ISSUE_INFO" FINAL_PROMPT
+                npx gemini "$FINAL_PROMPT"
+                exit 0
+            fi
+
+            if [ "$PREPARED" = true ]; then
                 echo "${YELLOW}Starting a new shell in $WORKTREE_PATH. Type 'exit' to return to the original directory.${NORMAL}"
                 exec $SHELL
             fi

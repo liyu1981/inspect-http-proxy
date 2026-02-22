@@ -121,13 +121,29 @@ func TestGetRecentSessions(t *testing.T) {
 		}
 	}
 
-	sessions, err := GetRecentSessions(db, configID, 10, 0, time.Time{})
+	sessions, err := GetRecentSessions(db, configID, 10, 0, time.Time{}, time.Time{})
 	if err != nil {
 		t.Fatalf("GetRecentSessions failed: %v", err)
 	}
 
 	if len(sessions) != 3 {
 		t.Errorf("Expected 3 sessions, got %d", len(sessions))
+	}
+
+	// Test time range filtering
+	// 3 sessions at T, T+1m, T+2m
+	// Filter for T+0.5m to T+1.5m, should get only the middle one (T+1m)
+	t0 := sessions[2].Timestamp // Earliest
+	t1 := t0.Add(30 * time.Second)
+	t2 := t0.Add(90 * time.Second)
+
+	rangeSessions, err := GetRecentSessions(db, configID, 10, 0, t1, t2)
+	if err != nil {
+		t.Fatalf("GetRecentSessions with range failed: %v", err)
+	}
+
+	if len(rangeSessions) != 1 {
+		t.Errorf("Expected 1 session in range, got %d", len(rangeSessions))
 	}
 }
 

@@ -8,6 +8,20 @@ import (
 	"github.com/liyu1981/inspect-http-proxy-plus/pkg/core"
 )
 
+func parseTime(s string) time.Time {
+	// Try RFC3339
+	t, err := time.Parse(time.RFC3339, s)
+	if err == nil {
+		return t
+	}
+	// Try Unix milliseconds
+	ms, err2 := strconv.ParseInt(s, 10, 64)
+	if err2 == nil {
+		return time.UnixMilli(ms)
+	}
+	return time.Time{}
+}
+
 // handleRecentSessions returns recent sessions for a specific config
 func (h *ApiHandler) handleRecentSessions(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -19,30 +33,23 @@ func (h *ApiHandler) handleRecentSessions(w http.ResponseWriter, r *http.Request
 	limit := getIntParam(r, "limit", 20)
 	offset := getIntParam(r, "offset", 0)
 
-	var since time.Time
+	var since, until time.Time
 	sinceStr := r.URL.Query().Get("since")
 	if sinceStr != "" {
-		// Try RFC3339
-		t, err := time.Parse(time.RFC3339, sinceStr)
-		if err != nil {
-			// Try Unix milliseconds
-			ms, err2 := strconv.ParseInt(sinceStr, 10, 64)
-			if err2 == nil {
-				t = time.UnixMilli(ms)
-				err = nil
-			}
-		}
-		if err == nil {
-			since = t
-		}
+		since = parseTime(sinceStr)
 	}
 
-	// If since is provided and limit is not explicitly set in the query, default limit to 0 (fetch all)
-	if sinceStr != "" && r.URL.Query().Get("limit") == "" {
+	untilStr := r.URL.Query().Get("until")
+	if untilStr != "" {
+		until = parseTime(untilStr)
+	}
+
+	// If since/until is provided and limit is not explicitly set in the query, default limit to 0 (fetch all)
+	if (sinceStr != "" || untilStr != "") && r.URL.Query().Get("limit") == "" {
 		limit = 0
 	}
 
-	sessions, err := core.GetRecentSessions(h.db, configID, limit, offset, since)
+	sessions, err := core.GetRecentSessions(h.db, configID, limit, offset, since, until)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Failed to fetch sessions", err)
 		return
@@ -267,7 +274,7 @@ func (h *ApiHandler) handleSearchSessions(w http.ResponseWriter, r *http.Request
 
 	if query == "" {
 		// Fallback to recent sessions if query is empty
-		sessions, err := core.GetRecentSessions(h.db, configID, limit, offset, time.Time{})
+		sessions, err := core.GetRecentSessions(h.db, configID, limit, offset, time.Time{}, time.Time{})
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "Failed to fetch sessions", err)
 			return

@@ -8,7 +8,11 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import type { ProxySessionStub, SessionListResponse } from "@/types";
+import type {
+  DateTimeRange,
+  ProxySessionStub,
+  SessionListResponse,
+} from "@/types";
 import { useSubscription } from "../../_hooks/use-subscription";
 import { EmptySessionState } from "./empty-session-state";
 import { SessionDetails } from "./session-details";
@@ -21,6 +25,7 @@ interface WithConfigsHistoryProps {
   searchQuery: string;
   filterMethod: string;
   filterStatus: string;
+  dateRange: DateTimeRange;
   onSearchQueryChange: (val: string) => void;
   onFilterMethodChange: (val: string) => void;
   onFilterStatusChange: (val: string) => void;
@@ -41,6 +46,7 @@ export function WithConfigsHistory({
   searchQuery,
   filterMethod,
   filterStatus,
+  dateRange,
   onSearchQueryChange,
   onFilterMethodChange,
   onFilterStatusChange,
@@ -78,8 +84,21 @@ export function WithConfigsHistory({
     if (debouncedSearchQuery) {
       p.set("q", debouncedSearchQuery);
     }
+    if (dateRange.from) {
+      p.set("since", dateRange.from.toISOString());
+    }
+    if (dateRange.to) {
+      p.set("until", dateRange.to.toISOString());
+    }
     return p;
-  }, [limit, offset, filterMethod, filterStatus, debouncedSearchQuery]);
+  }, [
+    limit,
+    offset,
+    filterMethod,
+    filterStatus,
+    debouncedSearchQuery,
+    dateRange,
+  ]);
 
   const {
     data: sessionList,

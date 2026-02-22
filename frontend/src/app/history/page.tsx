@@ -11,7 +11,9 @@ import {
 } from "@/components/ui/tooltip";
 import { fetcher } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import type { ProxySessionStub } from "@/types";
+import type { DateTimeRange, ProxySessionStub } from "@/types";
+import { DateTimeRangePicker } from "@/components/date-time-range-picker";
+import { subDays, startOfDay, endOfDay } from "date-fns";
 import { AppContainer } from "../_components/app-container";
 import { AppHeader } from "../_components/app-header";
 import { useGlobal } from "../_components/global-app-context";
@@ -30,6 +32,10 @@ function InspectPageContent() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [filterMethod, setFilterMethod] = React.useState("");
   const [filterStatus, setFilterStatus] = React.useState("");
+  const [dateRange, setDateRange] = React.useState<DateTimeRange>({
+    from: startOfDay(subDays(new Date(), 6)),
+    to: endOfDay(new Date()),
+  });
 
   const initLoadSessions = React.useCallback(
     async (configId: string, params: URLSearchParams) => {
@@ -38,9 +44,17 @@ function InspectPageContent() {
         q && q.length >= 3
           ? `/api/sessions/search/${configId}`
           : `/api/sessions/recent/${configId}`;
+      
+      if (dateRange.from) {
+        params.set("since", dateRange.from.toISOString());
+      }
+      if (dateRange.to) {
+        params.set("until", dateRange.to.toISOString());
+      }
+
       return fetcher(`${apiPath}?${params.toString()}`);
     },
-    [],
+    [dateRange],
   );
 
   const mergeSessions = React.useCallback(
@@ -101,7 +115,7 @@ function InspectPageContent() {
             selectedConfigId={selectedConfigId}
             onConfigChange={setSelectedConfigId}
           />
-          <div className="relative max-w-md w-full ml-4">
+          <div className="relative max-w-sm w-full ml-4">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search (3+ chars)..."
@@ -110,6 +124,12 @@ function InspectPageContent() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          <DateTimeRangePicker
+            initialDateFrom={dateRange.from}
+            initialDateTo={dateRange.to}
+            onUpdate={({ range }) => setDateRange(range)}
+            className="w-auto"
+          />
         </div>
         <div className="flex items-center gap-4">
           <Tooltip>
@@ -176,6 +196,7 @@ function InspectPageContent() {
           searchQuery={searchQuery}
           filterMethod={filterMethod}
           filterStatus={filterStatus}
+          dateRange={dateRange}
           onSearchQueryChange={setSearchQuery}
           onFilterMethodChange={setFilterMethod}
           onFilterStatusChange={setFilterStatus}

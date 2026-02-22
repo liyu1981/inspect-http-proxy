@@ -190,12 +190,15 @@ func CreateProxySession(db *gorm.DB, entry *LogEntry) (*ProxySessionRow, error) 
 // ============================================================
 
 // GetRecentSessions retrieves the most recent sessions for a specific config
-func GetRecentSessions(db *gorm.DB, configID string, limit int, offset int, since time.Time) ([]ProxySessionRow, error) {
+func GetRecentSessions(db *gorm.DB, configID string, limit int, offset int, since, until time.Time) ([]ProxySessionRow, error) {
 	var sessions []ProxySessionRow
 	query := db.Where("config_id = ?", configID)
 
 	if !since.IsZero() {
-		query = query.Where("timestamp > ?", since)
+		query = query.Where("timestamp >= ?", since)
+	}
+	if !until.IsZero() {
+		query = query.Where("timestamp <= ?", until)
 	}
 
 	query = query.Order("timestamp DESC")

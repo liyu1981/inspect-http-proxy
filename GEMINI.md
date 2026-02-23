@@ -5,7 +5,8 @@
 - fmt.Printf statements are for terminal interaction and should NEVER be silenced by log level or log destination settings.
 - run migration tool as: `go run --tags fts5 ./cmd/migrate/main.go <flags>`
 - run proxy as `go run --tags fts5 ./cmd/proxy/main.go <flags>`
-- use `scripts/build.sh` to build golang backend
+- use `scripts/build_dev.sh` to build golang dev backend
+- use `scripts/build.sh` to build golang release backend
 - use `scripts/build_and_copy_frontend.sh` to build frontend
 - NEVER do git commit unless the user explicitly tells you to
 - CGO is necessary as we need fts5 support for sqlite3

@@ -50,6 +50,7 @@ export interface ProxyConfig {
   target_url: string;
   truncate_log_body: boolean;
   is_proxyserver_active: boolean;
+  session_count: number;
 }
 
 export interface ProxySessionStub {

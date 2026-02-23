@@ -40,11 +40,12 @@ func (h *ApiHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/sysconfig", h.handleSysConfig)
 
 	// Config Management
-	mux.HandleFunc("/api/configs", h.handleConfigs)
-	mux.HandleFunc("/api/configs/current", h.handleConfigs)
-	mux.HandleFunc("/api/configs/history", h.handleConfigHistory)
-	mux.HandleFunc("/api/configs/{id}", h.handleConfigDetail)
-	mux.HandleFunc("/api/configs/{id}/sessions", h.handleSessionsByConfig)
+	mux.HandleFunc("GET /api/configs", h.handleConfigs)
+	mux.HandleFunc("GET /api/configs/current", h.handleConfigs)
+	mux.HandleFunc("GET /api/configs/history", h.handleConfigHistory)
+	mux.HandleFunc("GET /api/configs/{id}", h.handleConfigDetail)
+	mux.HandleFunc("GET /api/configs/{id}/sessions", h.handleSessionsByConfig)
+	mux.HandleFunc("DELETE /api/configs/{id}", h.handleDeleteConfig)
 
 	// Proxy server control endpoints
 	mux.HandleFunc("/api/proxyserver/create", h.handleProxyServerCreate)

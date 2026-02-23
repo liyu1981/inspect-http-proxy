@@ -22,7 +22,7 @@ import { ConfigSelector } from "./_components/config-selector";
 import { NoConfigsState } from "./_components/no-configs-state";
 import { WithConfigsHistory } from "./_components/with-configs-history";
 
-function InspectPageContent() {
+function HistoryPageContent() {
   const { allConfigs } = useGlobal();
   const { selectedConfigId, setSelectedConfigId } = useConfig();
   const [mutateFunc, setMutateFunc] = React.useState<(() => void) | null>(null);
@@ -208,10 +208,10 @@ function InspectPageContent() {
   );
 }
 
-export default function InspectPage() {
+export default function HistoryPage() {
   return (
     <ConfigProvider mode="history">
-      <InspectPageContent />
+      <HistoryPageContent />
     </ConfigProvider>
   );
 }

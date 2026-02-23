@@ -7,6 +7,7 @@ import (
 
 	"github.com/liyu1981/inspect-http-proxy-plus/pkg/core"
 	"github.com/spf13/viper"
+	"gorm.io/gorm"
 )
 
 // handleSysConfig returns or updates the system configuration
@@ -119,7 +120,19 @@ func (h *ApiHandler) handleConfigs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var fullConfigs []any = make([]any, 0, len(configs))
+	// Prepare result with session counts
+	type ConfigResponse struct {
+		ID                  string    `json:"id"`
+		CreatedAt           time.Time `json:"created_at"`
+		ConfigRow           any       `json:"config_row"`
+		ParsedConfig        any       `json:"parsed_config"`
+		IsProxyServerActive bool      `json:"is_proxyserver_active"`
+		TargetURL           string    `json:"target_url,omitempty"`
+		TruncateLogBody     bool      `json:"truncate_log_body"`
+		SessionCount        int64     `json:"session_count"`
+	}
+
+	fullConfigs := make([]ConfigResponse, 0, len(configs))
 
 	for _, configRow := range configs {
 		id := configRow.ID
@@ -133,26 +146,31 @@ func (h *ApiHandler) handleConfigs(w http.ResponseWriter, r *http.Request) {
 		var parsedJSON any
 		_ = json.Unmarshal([]byte(configRow.ConfigJSON), &parsedJSON)
 
+		// Count sessions for this config
+		var sessionCount int64
+		h.db.Model(&core.ProxySessionRow{}).Where("config_id = ?", id).Count(&sessionCount)
+
 		// Combine database record with runtime config details
-		fullConfig := map[string]any{
-			"id":                    configRow.ID,
-			"created_at":            configRow.CreatedAt,
-			"config_row":            configRow,
-			"parsed_config":         parsedJSON,
-			"is_proxyserver_active": isProxyServerActive,
+		fullConfig := ConfigResponse{
+			ID:                  configRow.ID,
+			CreatedAt:           configRow.CreatedAt,
+			ConfigRow:           configRow,
+			ParsedConfig:        parsedJSON,
+			IsProxyServerActive: isProxyServerActive,
+			SessionCount:        sessionCount,
 		}
 
 		// Add runtime proxy config details if available
 		if proxyConfig != nil {
-			fullConfig["target_url"] = proxyConfig.TargetURL.String()
-			fullConfig["truncate_log_body"] = proxyConfig.TruncateLogBody
+			fullConfig.TargetURL = proxyConfig.TargetURL.String()
+			fullConfig.TruncateLogBody = proxyConfig.TruncateLogBody
 		} else {
 			// Fallback for non-active configs: try to extract target_url from parsedJSON
 			if m, ok := parsedJSON.(map[string]any); ok {
 				if target, ok := m["target"].(string); ok {
-					fullConfig["target_url"] = target
+					fullConfig.TargetURL = target
 				} else if target, ok := m["Target"].(string); ok {
-					fullConfig["target_url"] = target
+					fullConfig.TargetURL = target
 				}
 			}
 		}
@@ -161,6 +179,45 @@ func (h *ApiHandler) handleConfigs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, fullConfigs)
+}
+
+// handleDeleteConfig deletes a configuration and its associated sessions
+func (h *ApiHandler) handleDeleteConfig(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "Config ID required", http.StatusBadRequest)
+		return
+	}
+
+	// Check if active
+	if core.GlobalVar.HasProxyServer(id) {
+		writeError(w, http.StatusConflict, "Cannot delete an active proxy configuration. Please stop the proxy first.", nil)
+		return
+	}
+
+	err := h.db.Transaction(func(tx *gorm.DB) error {
+		// Delete sessions (Triggers handle FTS deletion)
+		if err := tx.Where("config_id = ?", id).Delete(&core.ProxySessionRow{}).Error; err != nil {
+			return err
+		}
+		// Delete config
+		if err := tx.Delete(&core.ProxyConfigRow{}, "id = ?", id).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to delete config", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // handleConfigDetail returns detailed information about a specific configuration

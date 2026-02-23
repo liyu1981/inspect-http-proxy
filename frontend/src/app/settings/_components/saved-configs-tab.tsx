@@ -129,16 +129,16 @@ export function SavedConfigsTab() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Link
-                          href={`/history?config_id=${config.id}`}
+                          href={`/history?config_id=${config.config_row.ID}`}
                           className="hover:underline text-blue-500"
                         >
-                          {config.id.length > 10
-                            ? `${config.id.slice(0, 5)}...${config.id.slice(-5)}`
-                            : config.id}
+                          {config.config_row.ID.length > 10
+                            ? `${config.config_row.ID.slice(0, 5)}...${config.config_row.ID.slice(-5)}`
+                            : config.config_row.ID}
                         </Link>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>{config.id}</p>
+                        <p>{config.config_row.ID}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TableCell>

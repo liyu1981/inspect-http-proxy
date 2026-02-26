@@ -9,6 +9,7 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
+import { Fontdiner_Swanky } from "next/font/google";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import { ReadyState } from "react-use-websocket";
@@ -22,6 +23,11 @@ import { cn } from "@/lib/utils";
 import { isPanelOpenAtom } from "../_jotai/bottom-panel-store";
 import { navItems, navTitle } from "../nav-items";
 import { useWebSocketContext } from "./websocket-provider";
+
+const fontdinerSwanky = Fontdiner_Swanky({
+  weight: "400",
+  subsets: ["latin"],
+});
 
 export function AppNavSidebar() {
   const [navExpanded, setNavExpanded] = React.useState(false);
@@ -118,7 +124,9 @@ export function AppNavSidebar() {
         {navExpanded && (
           <div className="flex items-center gap-2">
             <Globe className="h-5 w-5 text-primary" />
-            <span className="font-semibold text-sm text-primary">
+            <span
+              className={cn("text-lg text-primary", fontdinerSwanky.className)}
+            >
               {navTitle}
             </span>
           </div>

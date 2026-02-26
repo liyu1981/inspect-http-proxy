@@ -10,6 +10,7 @@ import {
   Server,
   Terminal,
 } from "lucide-react";
+import { Fontdiner_Swanky } from "next/font/google";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -27,9 +28,15 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { AppContainer } from "../_components/app-container";
 import { AppHeader } from "../_components/app-header";
 import { JsonEditor } from "../_components/json-editor";
+
+const fontdinerSwanky = Fontdiner_Swanky({
+  weight: "400",
+  subsets: ["latin"],
+});
 
 interface ProxyEntry {
   listen: string;
@@ -392,9 +399,15 @@ export default function SettingsPage() {
           <div className="pt-8">
             <Separator className="mb-6" />
             <div className="text-center space-y-2">
-              <p className="text-sm text-muted-foreground font-semibold">
-                Inspect HTTP Proxy Plus {appVersion}
-              </p>
+              <div className="text-sm text-muted-foreground flex items-center justify-center gap-2">
+                <span className={cn('text-lg text-primary', fontdinerSwanky.className)}>ihpp</span>
+                <span className="">
+                  (<span className="text-primary">i</span>nspect <span className="text-primary">h</span>ttp <span className="text-primary">p</span>roxy <span className="text-primary">p</span>lus)
+                </span>
+              </div>
+              <div className="text-sm text-muted-foreground flex items-center justify-center gap-2">
+                <span>version: {appVersion}</span>
+              </div>
               <p className="text-xs text-muted-foreground">
                 Made with ❤️ for developers.{" "}
                 <a

@@ -1,6 +1,6 @@
 import { Bookmark, Brackets, List, Settings, Timer } from "lucide-react";
 
-export const navTitle = "HTTP Inspector";
+export const navTitle = "ihpp";
 
 export const defaultNavItem = "recent";
 

@@ -91,7 +91,7 @@ export function AppNavSidebar() {
         const sp = new URLSearchParams(p.params);
         return {
           id: `recent-${p.id}`,
-          label: `Recent: ${formatConfigDisplayName(config)}`,
+          label: formatConfigDisplayName(config),
           path: `/recent?${sp.toString()}`,
           configId: p.id,
         };
@@ -233,7 +233,7 @@ export function AppNavSidebar() {
           <div className="mt-4 space-y-1">
             {navExpanded && (
               <p className="px-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">
-                Pinned Sessions
+                Pinned Recent Traffics
               </p>
             )}
             {pinnedItems.map((item) => {

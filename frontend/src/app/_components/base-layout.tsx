@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import { useBottomPanelTabs } from "../bottom-panel-tabs";
 import { AppNavSidebar } from "./app-nav-sidebar";
 import { BottomPanel } from "./bottom-panel";
@@ -13,7 +13,9 @@ export function BaseLayout({ children }: { children: React.ReactNode }) {
     <GlobalAppProvider>
       <div className="h-screen flex bg-background">
         {/* Navigation Sidebar */}
-        <AppNavSidebar />
+        <Suspense fallback={<div className="w-16 border-r bg-muted/20" />}>
+          <AppNavSidebar />
+        </Suspense>
 
         {/* Main Content Area with Bottom Panel */}
         <div className="flex-1 flex flex-col relative overflow-hidden">

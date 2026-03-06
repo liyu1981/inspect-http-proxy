@@ -70,7 +70,11 @@ function ConfigProviderInner({
       const exists = allConfigs.some((c) => c.config_row.ID === persistentId);
       if (exists) {
         setSelectedConfigIdState(persistentId);
-        updateURLConfigId(persistentId);
+        // Only update URL if it's not already there and we're NOT in recent mode
+        // In recent mode, the page component handles URL initialization
+        if (!configIdFromUrl && mode !== "recent") {
+          updateURLConfigId(persistentId);
+        }
         return;
       }
     }
@@ -87,7 +91,9 @@ function ConfigProviderInner({
     }
 
     setSelectedConfigIdState(defaultId);
-    updateURLConfigId(defaultId);
+    if (mode !== "recent") {
+      updateURLConfigId(defaultId);
+    }
     localStorage.setItem("selected-config-id", defaultId);
   }, [searchParams, allConfigs, updateURLConfigId, selectedConfigId, mode]);
 

@@ -167,7 +167,7 @@ export function SessionList({
                     ))}
                   </SelectContent>
                 </Select>
-              </TableHead>{" "}
+              </TableHead>
               <TableHead className="h-16 sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_0_#e2e8f0] dark:shadow-[inset_0_-1px_0_0_#1e293b]">
                 Path
               </TableHead>
@@ -189,7 +189,7 @@ export function SessionList({
                   )}
                   <span>Time</span>
                 </div>
-              </TableHead>{" "}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

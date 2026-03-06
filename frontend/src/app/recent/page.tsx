@@ -1,48 +1,71 @@
 "use client";
 
-import { format } from "date-fns";
-import { ArrowLeftFromLine, Ban } from "lucide-react";
+import { format, startOfDay, subHours, subMinutes, subWeeks } from "date-fns";
+import { Clock } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
+import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { fetcher } from "@/lib/api";
 import type { ProxySessionStub } from "@/types";
 import { AppContainer } from "../_components/app-container";
 import { AppHeader } from "../_components/app-header";
 import { useGlobal } from "../_components/global-app-context";
-import {
-  ConfigProvider,
-  useConfig,
-} from "../history/_components/config-provider";
-import { ConfigSelector } from "../history/_components/config-selector";
+import { ConfigProvider } from "../history/_components/config-provider";
+import { formatConfigDisplayName } from "../history/_components/config-selector";
 import { NoConfigsState } from "../history/_components/no-configs-state";
 import { WithConfigsRecent } from "./_components/with-configs-recent";
 
 function RecentPageContent() {
   const { allConfigs } = useGlobal();
-  const { selectedConfigId, setSelectedConfigId } = useConfig();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const activeConfigs = React.useMemo(
-    () => allConfigs.filter((c) => c.is_proxyserver_active),
-    [allConfigs],
-  );
+  const configId = searchParams.get("config_id") || "";
+  const fromParam = searchParams.get("from");
 
-  const [startTime, setStartTime] = React.useState<number>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("recent_start_time");
-      return saved ? Number.parseInt(saved) : Date.now();
+  const selectedConfig = React.useMemo(() => {
+    return (
+      allConfigs.find((c) => c.config_row.ID === configId) ||
+      allConfigs.find((c) => c.is_proxyserver_active) ||
+      allConfigs[0]
+    );
+  }, [allConfigs, configId]);
+
+  const startTime = React.useMemo(() => {
+    if (fromParam) {
+      const ts = Number.parseInt(fromParam);
+      if (!Number.isNaN(ts)) return ts;
     }
-    return Date.now();
-  });
+    // Default to today (start of day)
+    return startOfDay(new Date()).getTime();
+  }, [fromParam]);
 
+  // Update URL if configId or from is missing
   React.useEffect(() => {
-    localStorage.setItem("recent_start_time", startTime.toString());
-  }, [startTime]);
+    const params = new URLSearchParams(searchParams.toString());
+    let changed = false;
+
+    if (!configId && selectedConfig) {
+      params.set("config_id", selectedConfig.config_row.ID);
+      changed = true;
+    }
+
+    if (!fromParam) {
+      params.set("from", startTime.toString());
+      changed = true;
+    }
+
+    if (changed) {
+      router.replace(`/recent?${params.toString()}`);
+    }
+  }, [configId, selectedConfig, searchParams, router, fromParam, startTime]);
 
   // Filter and Search States
   const [filterMethod, setFilterMethod] = React.useState("");
@@ -51,7 +74,6 @@ function RecentPageContent() {
   const initLoadSessions = React.useCallback(
     async (configId: string, params: URLSearchParams) => {
       const startTimeIso = new Date(startTime).toISOString();
-      // Keep existing filters from params
       const queryParams = new URLSearchParams(params);
       queryParams.set("since", startTimeIso);
 
@@ -75,22 +97,50 @@ function RecentPageContent() {
     [],
   );
 
-  const headTitle = "Recent Traffic";
+  const setTimeRange = (range: "30m" | "1h" | "today" | "1w") => {
+    let newFrom: number;
+    const now = new Date();
+    switch (range) {
+      case "30m":
+        newFrom = subMinutes(now, 30).getTime();
+        break;
+      case "1h":
+        newFrom = subHours(now, 1).getTime();
+        break;
+      case "today":
+        newFrom = startOfDay(now).getTime();
+        break;
+      case "1w":
+        newFrom = subWeeks(now, 1).getTime();
+        break;
+    }
 
-  const handleResetStartTime = () => {
-    setStartTime(Date.now());
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("from", newFrom.toString());
+    router.push(`/recent?${params.toString()}`);
   };
 
-  // Show no configs state if no active configs available
-  if (activeConfigs.length === 0) {
+  const getTimeRangeLabel = () => {
+    const diff = Date.now() - startTime;
+    const mins = diff / (1000 * 60);
+    const hours = mins / 60;
+    const days = hours / 24;
+
+    if (startTime === startOfDay(new Date()).getTime()) return "Today";
+    if (Math.abs(mins - 30) < 1) return "Past 30 mins";
+    if (Math.abs(hours - 1) < 0.1) return "Past 1 hour";
+    if (Math.abs(days - 7) < 0.1) return "Past Week";
+
+    return format(new Date(startTime), "PP pp");
+  };
+
+  if (allConfigs.length === 0) {
     return (
       <AppContainer>
         <AppHeader>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-primary">
-              {headTitle}
-            </h1>
-          </div>
+          <h1 className="text-xl font-bold tracking-tight text-primary">
+            Recent Traffic
+          </h1>
         </AppHeader>
         <NoConfigsState />
       </AppContainer>
@@ -99,46 +149,57 @@ function RecentPageContent() {
 
   return (
     <AppContainer>
-      {/* Header */}
       <AppHeader>
         <div className="flex items-center gap-4 flex-1">
-          <h1 className="text-xl font-bold tracking-tight whitespace-nowrap text-primary">
-            {headTitle}
-          </h1>
-          <ConfigSelector
-            configs={allConfigs}
-            selectedConfigId={selectedConfigId}
-            onConfigChange={setSelectedConfigId}
-          />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" onClick={handleResetStartTime}>
-                <ArrowLeftFromLine className="w-4 h-4" /> Showing records from{" "}
-                {format(new Date(startTime), "PP pp")}
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-primary">
+              Recent Traffic:
+            </h1>
+            <span className="text-lg font-medium text-muted-foreground">
+              {selectedConfig ? formatConfigDisplayName(selectedConfig) : ""}
+            </span>
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Clock className="w-4 h-4" />
+                Showing: {getTimeRangeLabel()}
               </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              clear recorded and start new recording
-            </TooltipContent>
-          </Tooltip>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => setTimeRange("30m")}>
+                Past 30 mins
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTimeRange("1h")}>
+                Past 1 hour
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTimeRange("today")}>
+                Today
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTimeRange("1w")}>
+                Past Week
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        <div className="flex items-center gap-4"></div>
       </AppHeader>
 
-      {/* Content */}
       <div className="flex-1 overflow-hidden">
-        <WithConfigsRecent
-          key={startTime} // reset component state when startTime changes
-          configId={selectedConfigId}
-          searchQuery={""}
-          filterMethod={filterMethod}
-          filterStatus={filterStatus}
-          onSearchQueryChange={() => {}}
-          onFilterMethodChange={setFilterMethod}
-          onFilterStatusChange={setFilterStatus}
-          initLoadSessions={initLoadSessions}
-          mergeSessions={mergeSessions}
-        />
+        {selectedConfig && (
+          <WithConfigsRecent
+            key={`${selectedConfig.config_row.ID}-${startTime}`}
+            configId={selectedConfig.config_row.ID}
+            searchQuery={""}
+            filterMethod={filterMethod}
+            filterStatus={filterStatus}
+            onSearchQueryChange={() => {}}
+            onFilterMethodChange={setFilterMethod}
+            onFilterStatusChange={setFilterStatus}
+            initLoadSessions={initLoadSessions}
+            mergeSessions={mergeSessions}
+          />
+        )}
       </div>
     </AppContainer>
   );
@@ -146,8 +207,10 @@ function RecentPageContent() {
 
 export default function RecentPage() {
   return (
-    <ConfigProvider mode="recent">
-      <RecentPageContent />
-    </ConfigProvider>
+    <Suspense fallback={null}>
+      <ConfigProvider mode="recent">
+        <RecentPageContent />
+      </ConfigProvider>
+    </Suspense>
   );
 }

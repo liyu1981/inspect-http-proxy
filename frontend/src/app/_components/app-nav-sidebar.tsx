@@ -5,12 +5,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Globe,
+  List,
   PanelBottom,
   Wifi,
   WifiOff,
+  X,
 } from "lucide-react";
 import { Fontdiner_Swanky } from "next/font/google";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { ReadyState } from "react-use-websocket";
 import { Button } from "@/components/ui/button";
@@ -21,7 +23,10 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { isPanelOpenAtom } from "../_jotai/bottom-panel-store";
+import { pinnedConfigsPersistenceAtom } from "../_jotai/pinned-configs-store";
+import { formatConfigDisplayName } from "../history/_components/config-selector";
 import { navItems, navTitle } from "../nav-items";
+import { useGlobal } from "./global-app-context";
 import { useWebSocketContext } from "./websocket-provider";
 
 const fontdinerSwanky = Fontdiner_Swanky({
@@ -30,36 +35,74 @@ const fontdinerSwanky = Fontdiner_Swanky({
 });
 
 export function AppNavSidebar() {
-  const [navExpanded, setNavExpanded] = React.useState(false);
+  const [navExpanded, setNavExpanded] = React.useState(true);
   const [isPanelOpen, setIsPanelOpen] = useAtom(isPanelOpenAtom);
+  const [pinnedConfigs, setPinnedConfigs] = useAtom(
+    pinnedConfigsPersistenceAtom,
+  );
+  const { allConfigs } = useGlobal();
+
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { readyState } = useWebSocketContext();
 
-  // Determine active menu based on current pathname
+  // Determine active menu based on current pathname and search params
   const getActiveMenuFromPath = React.useCallback(() => {
+    // If it's a recent traffic page, check the config_id
+    if (pathname.startsWith("/recent")) {
+      const configIdFromUrl = searchParams.get("config_id");
+      if (configIdFromUrl) {
+        return `recent-${configIdFromUrl}`;
+      }
+      return "recent";
+    }
+
     const activeItem = navItems.find((item) => pathname.startsWith(item.path));
     return activeItem ? activeItem.id : "";
-  }, [pathname]);
+  }, [pathname, searchParams]);
 
   const [activeMenu, setActiveMenu] = React.useState(getActiveMenuFromPath());
 
-  const menuItems = navItems;
   const topMenuItems = navItems.filter((item) => item.position !== "bottom");
   const bottomMenuItems = navItems.filter((item) => item.position === "bottom");
 
-  // Update active menu when pathname changes
+  // Update active menu when pathname or search params change
   React.useEffect(() => {
     setActiveMenu(getActiveMenuFromPath());
   }, [getActiveMenuFromPath]);
 
-  const handleMenuClick = (itemId: string) => {
-    const item = menuItems.find((m) => m.id === itemId);
-    if (item) {
-      setActiveMenu(itemId);
-      router.push(item.path);
-    }
+  const handleMenuClick = (itemId: string, path: string) => {
+    setActiveMenu(itemId);
+    router.push(path);
   };
+
+  const handleRemovePinned = (e: React.MouseEvent, configId: string) => {
+    e.stopPropagation();
+    setPinnedConfigs(pinnedConfigs.filter((p) => p.id !== configId));
+  };
+
+  const pinnedItems = React.useMemo(() => {
+    return pinnedConfigs
+      .map((p) => {
+        const config = allConfigs.find((c) => c.config_row.ID === p.id);
+        if (!config) return null;
+
+        const sp = new URLSearchParams(p.params);
+        return {
+          id: `recent-${p.id}`,
+          label: `Recent: ${formatConfigDisplayName(config)}`,
+          path: `/recent?${sp.toString()}`,
+          configId: p.id,
+        };
+      })
+      .filter(Boolean) as {
+      id: string;
+      label: string;
+      path: string;
+      configId: string;
+    }[];
+  }, [pinnedConfigs, allConfigs]);
 
   const connectionStatusMap: Record<ReadyState, string> = {
     [ReadyState.CONNECTING]: "Connecting",
@@ -116,7 +159,7 @@ export function AppNavSidebar() {
     <div
       className={cn(
         "border-r bg-muted/20 flex flex-col transition-all duration-300",
-        navExpanded ? "w-56" : "w-16",
+        navExpanded ? "w-64" : "w-16",
       )}
     >
       {/* Nav Header */}
@@ -146,43 +189,100 @@ export function AppNavSidebar() {
       </div>
 
       {/* Menu Items */}
-      <nav className="flex-1 p-2">
-        {topMenuItems.map((item) => {
-          const Icon = item.icon;
-          const button = (
-            <button
-              type="button"
-              key={item.id}
-              onClick={() => handleMenuClick(item.id)}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors mb-1",
-                activeMenu === item.id
-                  ? "bg-transparent text-primary"
-                  : "hover:bg-muted text-muted-foreground hover:text-foreground",
-                !navExpanded && "justify-center",
-              )}
-            >
-              <Icon
+      <div className="p-2 flex-1 space-y-1">
+        <nav className="py-2 overflow-y-auto border-b">
+          {topMenuItems.map((item) => {
+            const Icon = item.icon;
+            const button = (
+              <button
+                type="button"
+                key={item.id}
+                onClick={() => handleMenuClick(item.id, item.path)}
                 className={cn(
-                  "h-5 w-5 flex-shrink-0",
-                  activeMenu === item.id && "text-primary",
+                  "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors mb-1",
+                  activeMenu === item.id
+                    ? "bg-primary/10 text-primary font-bold"
+                    : "hover:bg-muted text-muted-foreground hover:text-foreground",
+                  !navExpanded && "justify-center",
                 )}
-              />
-              {navExpanded && (
-                <span className="text-sm font-medium">{item.label}</span>
-              )}
-            </button>
-          );
-          return navExpanded ? (
-            button
-          ) : (
-            <Tooltip key={item.id}>
-              <TooltipTrigger asChild>{button}</TooltipTrigger>
-              <TooltipContent side="right">{item.label}</TooltipContent>
-            </Tooltip>
-          );
-        })}
-      </nav>
+              >
+                <Icon
+                  className={cn(
+                    "h-5 w-5 flex-shrink-0",
+                    activeMenu === item.id && "text-primary",
+                  )}
+                />
+                {navExpanded && (
+                  <span className="text-sm font-medium">{item.label}</span>
+                )}
+              </button>
+            );
+            return navExpanded ? (
+              button
+            ) : (
+              <Tooltip key={item.id}>
+                <TooltipTrigger asChild>{button}</TooltipTrigger>
+                <TooltipContent side="right">{item.label}</TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </nav>
+
+        {/* Pinned Recent Traffic Items */}
+        {pinnedItems.length > 0 && (
+          <div className="mt-4 space-y-1">
+            {navExpanded && (
+              <p className="px-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">
+                Pinned Sessions
+              </p>
+            )}
+            {pinnedItems.map((item) => {
+              const button = (
+                <button
+                  type="button"
+                  key={item.id}
+                  onClick={() => handleMenuClick(item.id, item.path)}
+                  className={cn(
+                    "w-full group relative flex items-center gap-3 px-3 py-2 rounded-md transition-colors",
+                    activeMenu === item.id
+                      ? "bg-primary/10 text-primary font-bold"
+                      : "hover:bg-muted text-muted-foreground hover:text-foreground",
+                    !navExpanded && "justify-center",
+                  )}
+                >
+                  <List
+                    className={cn(
+                      "h-5 w-5 flex-shrink-0",
+                      activeMenu === item.id && "text-primary",
+                    )}
+                  />
+                  {navExpanded && (
+                    <>
+                      <span className="text-sm font-medium truncate pr-6">
+                        {item.label}
+                      </span>
+                      <div
+                        onClick={(e) => handleRemovePinned(e, item.configId)}
+                        className="absolute right-2 opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity"
+                      >
+                        <X className="h-4 w-4" />
+                      </div>
+                    </>
+                  )}
+                </button>
+              );
+              return navExpanded ? (
+                button
+              ) : (
+                <Tooltip key={item.id}>
+                  <TooltipTrigger asChild>{button}</TooltipTrigger>
+                  <TooltipContent side="right">{item.label}</TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Footer Actions */}
       <div className="p-2 border-t space-y-1">
@@ -192,11 +292,11 @@ export function AppNavSidebar() {
             <button
               type="button"
               key={item.id}
-              onClick={() => handleMenuClick(item.id)}
+              onClick={() => handleMenuClick(item.id, item.path)}
               className={cn(
                 "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors mb-1",
                 activeMenu === item.id
-                  ? "bg-transparent text-primary"
+                  ? "bg-primary/10 text-primary font-bold"
                   : "hover:bg-muted text-muted-foreground hover:text-foreground",
                 !navExpanded && "justify-center",
               )}

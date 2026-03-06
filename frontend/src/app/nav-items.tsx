@@ -2,32 +2,27 @@ import { Bookmark, Brackets, List, Settings, Timer } from "lucide-react";
 
 export const navTitle = "ihpp";
 
-export const defaultNavItem = "recent";
+export const defaultNavItem = "proxies";
 
 export const navItems = [
   {
-    id: "recent" as const,
-    icon: List,
-    label: "Recent Traffic",
-    path: "/recent",
+    id: "proxies" as const,
+    icon: Brackets,
+    label: "Proxy Servers",
+    path: "/proxies",
   },
   {
     id: "history" as const,
     icon: Timer,
     label: "History Traffic",
     path: "/history",
+    position: "bottom",
   },
   {
     id: "saved" as const,
     icon: Bookmark,
-    label: "Saved",
+    label: "Saved Traffic",
     path: "/saved",
-  },
-  {
-    id: "proxies" as const,
-    icon: Brackets,
-    label: "Proxy Servers",
-    path: "/proxies",
     position: "bottom",
   },
   {

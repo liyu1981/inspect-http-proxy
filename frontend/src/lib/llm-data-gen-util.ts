@@ -109,12 +109,22 @@ function formatBody(
 /**
  * Formats headers into an HTTP-like Markdown block
  */
-function formatHeaders(headers: Record<string, string[]>): string {
-  if (!headers || Object.keys(headers).length === 0) return "_No Headers_";
+function formatHeaders(headers: Record<string, string[]> | undefined): string {
+  if (
+    !headers ||
+    typeof headers !== "object" ||
+    Object.keys(headers).length === 0
+  ) {
+    return "_No Headers_";
+  }
 
   let headerStr = "```http\n";
   for (const [key, values] of Object.entries(headers)) {
-    headerStr += `${key}: ${values.join(", ")}\n`;
+    if (!values) continue;
+
+    // Handle both array and single string values
+    const valueStr = Array.isArray(values) ? values.join(", ") : String(values);
+    headerStr += `${key}: ${valueStr}\n`;
   }
   headerStr += "```";
   return headerStr;
@@ -124,29 +134,38 @@ function formatHeaders(headers: Record<string, string[]>): string {
  * Generates LLM-friendly Markdown for a single session
  */
 export function generateLLMMarkdown(data: SessionData): string {
-  const { session, request_headers, response_headers } = data;
-  const timeStr = format(new Date(session.Timestamp), "PP pp");
+  if (!data || !data.session) return "No session data available";
 
-  return `# Session: ${session.ID}
+  const { session, request_headers, response_headers } = data;
+  let timeStr = "Unknown";
+  try {
+    if (session.Timestamp) {
+      timeStr = format(new Date(session.Timestamp), "PP pp");
+    }
+  } catch (_e) {
+    timeStr = String(session.Timestamp);
+  }
+
+  return `# Session: ${session.ID || "Unknown"}
 - **Time:** ${timeStr}
-- **Duration:** ${session.DurationMs}ms
-- **Status:** ${session.ResponseStatusCode} ${session.ResponseStatusText || ""}
+- **Duration:** ${session.DurationMs ?? 0}ms
+- **Status:** ${session.ResponseStatusCode ?? 0} ${session.ResponseStatusText || ""}
 
 ## Request
-- **Method:** ${session.RequestMethod}
-- **URL:** ${session.RequestURLFull}
+- **Method:** ${session.RequestMethod || "UNKNOWN"}
+- **URL:** ${session.RequestURLFull || "UNKNOWN"}
 - **Headers:**
 ${formatHeaders(request_headers)}
 
 - **Body (${session.RequestContentType || "text/plain"}):**
-${formatBody(session.RequestBody, session.RequestContentType, session.RequestBodySize)}
+${formatBody(session.RequestBody, session.RequestContentType || "text/plain", session.RequestBodySize || 0)}
 
 ## Response
 - **Headers:**
 ${formatHeaders(response_headers)}
 
 - **Body (${session.ResponseContentType || "text/plain"}):**
-${formatBody(session.ResponseBody, session.ResponseContentType, session.ResponseBodySize)}
+${formatBody(session.ResponseBody, session.ResponseContentType || "text/plain", session.ResponseBodySize || 0)}
 
 ---
 `;

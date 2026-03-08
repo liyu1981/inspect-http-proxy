@@ -56,32 +56,48 @@ export function generateCurlCommand(options: CurlOptions): string {
   let curlCommand = "curl";
 
   // Add method
-  if (method && method !== "GET") {
-    curlCommand += ` -X ${method}`;
+  if (method && method.toUpperCase() !== "GET") {
+    curlCommand += ` -X ${method.toUpperCase()}`;
   }
 
   // Add headers
-  for (const [key, values] of Object.entries(headers)) {
-    // Escape single quotes in header values
-    const escapedValue = values.join(", ").replace(/'/g, "'\\''");
-    curlCommand += ` \\\n  -H '${key}: ${escapedValue}'`;
+  if (headers && typeof headers === "object") {
+    for (const [key, values] of Object.entries(headers)) {
+      if (!values) continue;
+
+      // Handle both array and single string values (though expected to be array)
+      const valueStr = Array.isArray(values)
+        ? values.join(", ")
+        : String(values);
+
+      // Escape single quotes in header values
+      const escapedValue = valueStr.replace(/'/g, "'\\''");
+      curlCommand += ` \\\n  -H '${key}: ${escapedValue}'`;
+    }
   }
 
   // Add body if present
   if (body) {
     // Check if body is base64 encoded and decode if necessary
     let processedBody = body;
-    if (isBase64(body)) {
+    if (typeof body === "string" && isBase64(body)) {
       processedBody = decodeBase64(body);
+    } else if (typeof body !== "string") {
+      // If it's not a string (e.g. object), stringify it
+      try {
+        processedBody = JSON.stringify(body);
+      } catch (_e) {
+        processedBody = String(body);
+      }
     }
 
     // Escape single quotes in body
-    const escapedBody = processedBody.replace(/'/g, "'\\''");
+    const escapedBody = String(processedBody).replace(/'/g, "'\\''");
     curlCommand += ` \\\n  -d '${escapedBody}'`;
   }
 
   // Add URL (always last)
-  curlCommand += ` \\\n  '${url}'`;
+  curlCommand += ` \\\n  '${url || ""}'`;
 
   return curlCommand;
 }
@@ -91,11 +107,44 @@ export function generateCurlCommand(options: CurlOptions): string {
  * @returns Promise that resolves to true if successful, false otherwise
  */
 export async function copyToClipboard(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch (err) {
-    console.error("Failed to copy to clipboard:", err);
-    return false;
+  // Try using the modern Clipboard API first
+  if (
+    navigator.clipboard &&
+    typeof navigator.clipboard.writeText === "function"
+  ) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (err) {
+      console.warn("Failed to copy with Clipboard API, trying fallback:", err);
+    }
   }
+
+  // Fallback for non-secure contexts or when Clipboard API fails
+  try {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+
+    // Ensure the textarea is not visible but still part of the DOM
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    textArea.style.top = "0";
+    textArea.style.opacity = "0";
+    textArea.style.pointerEvents = "none";
+
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    const successful = document.execCommand("copy");
+    document.body.removeChild(textArea);
+
+    if (successful) {
+      return true;
+    }
+  } catch (err) {
+    console.error("Fallback copy failed:", err);
+  }
+
+  return false;
 }

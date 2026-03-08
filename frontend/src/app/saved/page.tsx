@@ -8,7 +8,7 @@ import { AppHeader } from "../_components/app-header";
 import { SavedPage as SavedContent } from "./_components/saved-page";
 
 function SavedRoot() {
-  const [isValidating, setIsValidating] = React.useState(false);
+  const [_isValidating, setIsValidating] = React.useState(false);
 
   // Filter and Search States
   const [searchQuery, setSearchQuery] = React.useState("");

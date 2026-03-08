@@ -17,7 +17,7 @@ import { WithConfigsHistory } from "./_components/with-configs-history";
 function HistoryPageContent() {
   const { allConfigs } = useGlobal();
   const { selectedConfigId, setSelectedConfigId } = useConfig();
-  const [isValidating, setIsValidating] = React.useState(false);
+  const [_isValidating, setIsValidating] = React.useState(false);
 
   // Filter and Search States
   const [searchQuery, setSearchQuery] = React.useState("");

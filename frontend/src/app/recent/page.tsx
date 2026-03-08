@@ -80,14 +80,34 @@ function RecentPageContent() {
     }
   }, [
     configId,
-    selectedConfig?.config_row.ID, // primitive string instead of object
+    selectedConfig, // included the whole object as it's needed for the logic
     fromParam,
     startTime,
     configExists,
     isLoading,
-    // searchParams and router intentionally omitted — both are stable references
-    // and including searchParams (an object) caused an infinite re-render loop
+    searchParams,
+    router,
   ]);
+
+  // Sync back to pinned configs when params change
+  React.useEffect(() => {
+    if (!configId || !pinnedConfigs.some((p) => p.id === configId)) return;
+
+    const currentParams = Object.fromEntries(searchParams.entries());
+    const existingPin = pinnedConfigs.find((p) => p.id === configId);
+
+    // Only update if params actually changed to avoid infinite loops
+    const hasChanged =
+      JSON.stringify(existingPin?.params) !== JSON.stringify(currentParams);
+
+    if (hasChanged) {
+      setPinnedConfigs(
+        pinnedConfigs.map((p) =>
+          p.id === configId ? { ...p, params: currentParams } : p,
+        ),
+      );
+    }
+  }, [searchParams, configId, pinnedConfigs, setPinnedConfigs]);
 
   // Filter and Search States
   const [filterMethod, setFilterMethod] = React.useState("");

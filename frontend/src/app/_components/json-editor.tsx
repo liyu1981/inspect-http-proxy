@@ -66,6 +66,7 @@ export interface JsonEditorProps
   > {
   initialJson?: JsonValue;
   onChangeJson?: (value: JsonValue | undefined) => void;
+  onBlurJson?: (value: JsonValue | undefined) => void;
   debounce?: number;
   stringified?: boolean;
   parser?: Parser;
@@ -81,6 +82,7 @@ export interface JsonEditorRef {
  * Props:
  *   initialJson    — initial value (string | object | array | undefined)
  *   onChangeJson   — called with the new value whenever the editor changes
+ *   onBlurJson     — called with the new value when the editor loses focus
  *   debounce       — debounce ms for text-mode changes (default: 300)
  *   stringified    — when true, strings are kept as text; false = parse them (default: true)
  *   parser         — custom { parse, stringify } (default: JSON.parse / JSON.stringify)
@@ -96,6 +98,7 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(
     {
       initialJson,
       onChangeJson,
+      onBlurJson,
       debounce: debounceProp,
       stringified: stringifiedProp,
       parser: parserProp,
@@ -130,16 +133,9 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(
       [resolveStringified],
     );
 
-    // Debounced emitter — rebuilt when delay or stringified changes
-    const debouncedHandleChangeRef = useRef<ReturnType<typeof debounce> | null>(
-      null,
-    );
-    useEffect(() => {
-      const delay = resolveDebounce();
-      const stringified = resolveStringified();
-
-      const emit = (content: { text?: string; json?: unknown }) => {
-        preventUpdatingRef.current = true;
+    const getContentValue = useCallback(
+      (content: { text?: string; json?: unknown }) => {
+        const stringified = resolveStringified();
         const mutableContent = { ...content };
         if (!stringified && mutableContent.text !== undefined) {
           if (editorRef.current && !editorRef.current.validate()) {
@@ -147,15 +143,29 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(
           }
           mutableContent.text = undefined;
         }
-        onChangeJson?.(
-          (mutableContent.text === undefined
+        return (
+          mutableContent.text === undefined
             ? mutableContent.json
-            : mutableContent.text) as JsonValue | undefined,
-        );
+            : mutableContent.text
+        ) as JsonValue | undefined;
+      },
+      [resolveStringified],
+    );
+
+    // Debounced emitter — rebuilt when delay or stringified changes
+    const debouncedHandleChangeRef = useRef<ReturnType<typeof debounce> | null>(
+      null,
+    );
+    useEffect(() => {
+      const delay = resolveDebounce();
+
+      const emit = (content: { text?: string; json?: unknown }) => {
+        preventUpdatingRef.current = true;
+        onChangeJson?.(getContentValue(content));
       };
 
       debouncedHandleChangeRef.current = debounce(emit, delay) as any;
-    }, [onChangeJson, resolveDebounce, resolveStringified]);
+    }, [onChangeJson, resolveDebounce, getContentValue]);
 
     // Mount the editor once
     // biome-ignore lint/correctness/useExhaustiveDependencies: rest is not usable
@@ -198,6 +208,16 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(
           };
           debouncedHandleChangeRef.current?.(mutableContent);
         },
+        onBlur: () => {
+          if (editorRef.current && onBlurJson) {
+            const content = editorRef.current.get() as {
+              text?: string;
+              json?: unknown;
+            };
+            preventUpdatingRef.current = true;
+            onBlurJson(getContentValue(content));
+          }
+        },
         ...resolvedBoolAttrs,
         ...extraAttrs,
       };
@@ -213,7 +233,13 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(
       };
       // Only run on mount
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [buildContent, initialJson, parserProp?.parse]);
+    }, [
+      buildContent,
+      initialJson,
+      parserProp?.parse,
+      onBlurJson,
+      getContentValue,
+    ]);
 
     // Sync external initialJson changes into the editor
     useEffect(() => {

@@ -2,7 +2,7 @@
 
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { FileIcon, Loader2, Logs, Plus, Send, X } from "lucide-react"; // Added Zap/Globe for tab icons
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,7 +33,7 @@ import {
 } from "../_jotai/http-res";
 import { useGlobal } from "./global-app-context";
 import { HttpResponseViewer } from "./http-response-viewer";
-import { JsonEditor } from "./json-editor";
+import { JsonEditor, type JsonEditorRef } from "./json-editor";
 
 const HTTP_METHODS = [
   "GET",
@@ -55,6 +55,8 @@ export default function HttpReqBuilder() {
   const formDataEntries = useAtomValue(requestFormDataEntriesAtom);
   const headers = useAtomValue(requestHeadersAtom);
 
+  const jsonEditorRef = useRef<JsonEditorRef>(null);
+
   // Actions
   const addHeader = useSetAtom(addHeaderAtom);
   const updateHeader = useSetAtom(updateHeaderAtom);
@@ -70,9 +72,24 @@ export default function HttpReqBuilder() {
 
   const [isCalculating, setIsCalculating] = useState(false);
 
+  const getLatestBody = useCallback(() => {
+    if (bodyType === "json" && jsonEditorRef.current?.jsonEditor) {
+      const content = jsonEditorRef.current.jsonEditor.get() as {
+        text?: string;
+        json?: unknown;
+      };
+      if (content.text !== undefined) return content.text;
+      return JSON.stringify(content.json);
+    }
+    return body;
+  }, [body, bodyType]);
+
   const sendRequest = async () => {
     if (!url) return;
     setIsCalculating(true);
+
+    const latestBody = getLatestBody();
+    const requestWithLatestBody = { ...currentRequest, body: latestBody };
 
     let finalUrl = url;
     // If url doesn't have scheme and host, default to localhost with current listen port
@@ -120,7 +137,7 @@ export default function HttpReqBuilder() {
 
     try {
       // 1. Generate unique hash for this specific request configuration
-      const hash = await calculateRequestHash(currentRequest);
+      const hash = await calculateRequestHash(requestWithLatestBody);
 
       // 2. Open (or focus) a tab for this specific response
       // We pass the hash to the viewer so it knows which data to pull from the map
@@ -136,7 +153,11 @@ export default function HttpReqBuilder() {
       // 3. Set loading state in the global response map
       updateResponseState({
         hash,
-        state: { loading: true, error: null, request: { ...currentRequest } },
+        state: {
+          loading: true,
+          error: null,
+          request: { ...requestWithLatestBody },
+        },
       });
 
       // 4. Prepare Headers
@@ -162,7 +183,7 @@ export default function HttpReqBuilder() {
         res = await api.post("/api/httpreq", formData);
       } else {
         // Prepare JSON/Raw Payload
-        let requestBody = body || "";
+        let requestBody = latestBody || "";
         if (bodyType === "json" && requestBody.trim()) {
           try {
             // Normalize JSON if applicable
@@ -195,7 +216,7 @@ export default function HttpReqBuilder() {
         },
       });
     } catch (err: any) {
-      const hash = await calculateRequestHash(currentRequest);
+      const hash = await calculateRequestHash(requestWithLatestBody);
       const errorMessage =
         err.response?.data?.error || err.message || "Failed to send request";
 
@@ -348,11 +369,16 @@ export default function HttpReqBuilder() {
                 {bodyType === "json" && (
                   <div className="flex flex-col h-full overflow-auto">
                     <JsonEditor
-                      key={body}
-                      initialJson={body ? JSON.parse(body) : {}}
-                      onChangeJson={(newJson) =>
-                        setBody(JSON.stringify(newJson))
-                      }
+                      ref={jsonEditorRef}
+                      initialJson={body}
+                      stringified={true}
+                      onBlurJson={(newValue) => {
+                        if (typeof newValue === "string") {
+                          setBody(newValue);
+                        } else {
+                          setBody(JSON.stringify(newValue, null, 2));
+                        }
+                      }}
                     />
                   </div>
                 )}

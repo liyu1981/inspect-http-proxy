@@ -2,7 +2,7 @@
 
 import { format, startOfDay, subHours, subMinutes, subWeeks } from "date-fns";
 import { useAtom } from "jotai";
-import { AlertCircle, Clock, XCircle } from "lucide-react";
+import { Clock, XCircle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { Suspense } from "react";

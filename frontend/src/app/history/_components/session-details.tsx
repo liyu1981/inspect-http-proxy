@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
+import { Config } from "tailwind-merge";
 import { useGlobal } from "@/app/_components/global-app-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,6 @@ import type { SessionDetailResponse } from "@/types";
 import { FloatToolbar } from "../../_components/float-toolbar";
 import { resetRequestAtom } from "../../_jotai/http-req";
 import { BodySection } from "./body-section";
-import { useConfig } from "./config-provider";
 import { HeadersSection } from "./headers-section";
 import { StatusBadge } from "./status-badge";
 
@@ -43,8 +43,15 @@ interface SessionDetailsProps {
   id: string;
 }
 
+interface ConfigJSON {
+  listen: string;
+  target: string;
+  truncate_log_body: boolean;
+  active: boolean;
+  error: string;
+}
+
 export function SessionDetails({ id }: SessionDetailsProps) {
-  const { selectedConfigId } = useConfig();
   const { allConfigs } = useGlobal();
   const [copied, setCopied] = useState(false);
   const [copiedLLM, setCopiedLLM] = useState(false);
@@ -71,18 +78,6 @@ export function SessionDetails({ id }: SessionDetailsProps) {
     };
   }, []);
 
-  // Memoize config lookup to avoid re-parsing JSON every render
-  const selectedConfigObj = useMemo(() => {
-    const selectedConfig = Array.isArray(allConfigs)
-      ? allConfigs.find((config) => config.id === selectedConfigId)
-      : undefined;
-    try {
-      return JSON.parse(selectedConfig?.config_row.ConfigJSON || "{}");
-    } catch {
-      return {};
-    }
-  }, [allConfigs, selectedConfigId]);
-
   const { cache } = useSWRConfig();
 
   // Evict this session's SWR cache entry on unmount.
@@ -103,12 +98,38 @@ export function SessionDetails({ id }: SessionDetailsProps) {
     },
   );
 
-  // Stable references to session sub-objects so downstream components
-  // don't re-render due to new object identity on every SWR revalidation
-  const session = useMemo(() => data?.session, [data]);
-  const requestHeaders = useMemo(() => data?.request_headers, [data]);
-  const responseHeaders = useMemo(() => data?.response_headers, [data]);
-  const queryParameters = useMemo(() => data?.query_parameters, [data]);
+  // Stable reference to session
+  const session = data?.session;
+
+  // Memoize config lookup based on session's ConfigID to avoid re-parsing JSON every render
+  const sessionConfig = useMemo(() => {
+    if (!session || !allConfigs) return undefined;
+    return Array.isArray(allConfigs)
+      ? allConfigs.find((config) => config.id === session.ConfigID)
+      : undefined;
+  }, [allConfigs, session]);
+
+  const sessionConfigObj = useMemo(() => {
+    try {
+      console.log("ConfigJSON", sessionConfig?.config_row.ConfigJSON);
+      const parsed = JSON.parse(
+        sessionConfig?.config_row.ConfigJSON || "{}",
+      ) as ConfigJSON;
+      return {
+        listen: parsed.listen || "",
+        target: parsed.target || sessionConfig?.target_url || "",
+      };
+    } catch {
+      return {
+        listen: "",
+        target: sessionConfig?.target_url || "",
+      };
+    }
+  }, [sessionConfig]);
+
+  const requestHeaders = data?.request_headers;
+  const responseHeaders = data?.response_headers;
+  const queryParameters = data?.query_parameters;
 
   const handleBookmark = async () => {
     if (!data) return;
@@ -126,7 +147,7 @@ export function SessionDetails({ id }: SessionDetailsProps) {
 
     const curlCommand = generateCurlCommand({
       method: session.RequestMethod,
-      url: `http://localhost${selectedConfigObj.listen}${session.RequestPath}`,
+      url: `http://localhost${sessionConfigObj.listen}${session.RequestPath}`,
       headers: requestHeaders as any,
       body: session.RequestBody,
       contentType: session.RequestContentType,
@@ -204,7 +225,7 @@ export function SessionDetails({ id }: SessionDetailsProps) {
               <span>{format(new Date(session.Timestamp), "PP pp")}</span>
               <span>
                 Client: {session.ClientIP} {"🠞"} Server: {session.RequestHost}{" "}
-                {"🠞"} {selectedConfigObj.Target}
+                {"🠞"} {sessionConfigObj.target}
               </span>
             </div>
           </div>
@@ -321,7 +342,7 @@ export function SessionDetails({ id }: SessionDetailsProps) {
               <div className="grid grid-cols-3 gap-2">
                 <div className="font-medium">Remote Host</div>
                 <div className="col-span-2 font-mono">
-                  {session.RequestHost} {"🠞"} {selectedConfigObj.Target}
+                  {session.RequestHost} {"🠞"} {sessionConfigObj.target}
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2">

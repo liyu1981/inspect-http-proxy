@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { isPanelOpenAtom } from "../_jotai/bottom-panel-store";
+import { navExpandedAtom } from "../_jotai/layout-store";
 import { pinnedConfigsPersistenceAtom } from "../_jotai/pinned-configs-store";
 import { formatConfigDisplayName } from "../history/_components/config-selector";
 import { navItems, navTitle } from "../nav-items";
@@ -35,7 +36,7 @@ const fontdinerSwanky = Fontdiner_Swanky({
 });
 
 export function AppNavSidebar() {
-  const [navExpanded, setNavExpanded] = React.useState(true);
+  const [navExpanded, setNavExpanded] = useAtom(navExpandedAtom);
   const [isPanelOpen, setIsPanelOpen] = useAtom(isPanelOpenAtom);
   const [pinnedConfigs, setPinnedConfigs] = useAtom(
     pinnedConfigsPersistenceAtom,

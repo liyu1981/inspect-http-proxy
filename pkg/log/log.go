@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/liyu1981/inspect-http-proxy-plus/pkg/core"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 func ResolveLogSettings() (string, string) {
@@ -20,7 +22,7 @@ func ResolveLogSettings() (string, string) {
 		if core.IsDev() {
 			dest = "console"
 		} else {
-			dest = "null"
+			dest = "default"
 		}
 	}
 
@@ -33,6 +35,16 @@ func ResolveLogSettings() (string, string) {
 	}
 
 	return level, dest
+}
+
+func getLogFilePath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	logDir := filepath.Join(home, ".ihpp", "logs")
+	_ = os.MkdirAll(logDir, 0700)
+	return filepath.Join(logDir, "ihpp.log")
 }
 
 func SetupLogger(logLevel string, logDest string) {
@@ -53,20 +65,53 @@ func SetupLogger(logLevel string, logDest string) {
 			Out:        os.Stderr,
 			TimeFormat: time.RFC3339,
 		}
-	case "null":
-		out = io.Discard
-	case "":
-		// Default case if empty string somehow gets here
+	case "default":
 		if core.IsDev() {
 			out = zerolog.ConsoleWriter{
 				Out:        os.Stderr,
 				TimeFormat: time.RFC3339,
 			}
 		} else {
-			out = io.Discard
+			logFile := getLogFilePath()
+			if logFile != "" {
+				out = &lumberjack.Logger{
+					Filename:   logFile,
+					MaxSize:    20,
+					MaxBackups: 3,
+					LocalTime:  true,
+					Compress:   true,
+				}
+			} else {
+				out = zerolog.ConsoleWriter{
+					Out:        os.Stderr,
+					TimeFormat: time.RFC3339,
+				}
+			}
+		}
+	case "":
+		if core.IsDev() {
+			out = zerolog.ConsoleWriter{
+				Out:        os.Stderr,
+				TimeFormat: time.RFC3339,
+			}
+		} else {
+			logFile := getLogFilePath()
+			if logFile != "" {
+				out = &lumberjack.Logger{
+					Filename:   logFile,
+					MaxSize:    20,
+					MaxBackups: 3,
+					LocalTime:  true,
+					Compress:   true,
+				}
+			} else {
+				out = zerolog.ConsoleWriter{
+					Out:        os.Stderr,
+					TimeFormat: time.RFC3339,
+				}
+			}
 		}
 	default:
-		// Assume file path
 		f, err := os.OpenFile(logDest, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error opening log file %s: %v. Falling back to console.\n", logDest, err)

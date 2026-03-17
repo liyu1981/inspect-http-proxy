@@ -70,7 +70,7 @@ func LoadSettingsFromDB(db *gorm.DB, sysConfig *core.SysConfig) {
 		if core.IsDev() {
 			sysConfig.LogDest = "console"
 		} else {
-			sysConfig.LogDest = "null"
+			sysConfig.LogDest = "default"
 		}
 	}
 

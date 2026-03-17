@@ -3,19 +3,17 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
+	"github.com/liyu1981/inspect-http-proxy-plus/pkg/config"
 	"github.com/liyu1981/inspect-http-proxy-plus/pkg/core"
 	"github.com/liyu1981/inspect-http-proxy-plus/pkg/web"
 )
@@ -78,66 +76,6 @@ func handleSubcommands() bool {
 	return false
 }
 
-func resolveLogSettings() (string, string) {
-	level := viper.GetString("log-level")
-	dest := viper.GetString("log-dest")
-
-	if dest == "" {
-		if core.IsDev() {
-			dest = "console"
-		} else {
-			dest = "null"
-		}
-	}
-
-	if level == "" {
-		if core.IsDev() {
-			level = "debug"
-		} else {
-			level = core.LogLevelDisabled
-		}
-	}
-
-	return level, dest
-}
-
-func loadConfig() {
-	// Set default config file search parameters
-	viper.SetConfigName(".proxy.config")
-	viper.SetConfigType("toml")
-	viper.AddConfigPath(".")
-
-	// Important: Bind flags to viper so they take precedence over config file
-	viper.BindPFlags(pflag.CommandLine)
-	viper.BindPFlag("in-memory", pflag.Lookup("in-memory"))
-
-	// If a specific config file is passed via flag, use that
-	if cfg, _ := pflag.CommandLine.GetString("config"); cfg != "" {
-		viper.SetConfigFile(cfg)
-	}
-
-	// Read the config file
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			fmt.Fprintf(os.Stderr, "Error reading config: %v\n", err)
-		}
-	}
-
-	level, dest := resolveLogSettings()
-	setupLogger(level, dest)
-
-	if viper.ConfigFileUsed() != "" {
-		fmt.Printf("%sConfig file:%s %s\n", core.ColorCyan, core.ColorReset, viper.ConfigFileUsed())
-	}
-	if viper.ConfigFileUsed() != "" {
-		log.Info().Str("file", viper.ConfigFileUsed()).Msg("Configuration loaded from file")
-	}
-
-	// Support environment variables
-	viper.AutomaticEnv()
-	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-}
-
 func parseProxyFlag(proxyStr string, index int) (core.SysConfigProxyEntry, error) {
 	parts := strings.Split(proxyStr, ",")
 
@@ -169,53 +107,6 @@ func parseProxyFlag(proxyStr string, index int) (core.SysConfigProxyEntry, error
 	}, nil
 }
 
-func setupLogger(logLevel string, logDest string) {
-	if logLevel == core.LogLevelDisabled {
-		zerolog.SetGlobalLevel(zerolog.Disabled)
-		return
-	}
-	level, err := zerolog.ParseLevel(logLevel)
-	if err != nil {
-		level = zerolog.InfoLevel
-	}
-	zerolog.SetGlobalLevel(level)
-
-	var out io.Writer
-	switch logDest {
-	case "console":
-		out = zerolog.ConsoleWriter{
-			Out:        os.Stderr,
-			TimeFormat: time.RFC3339,
-		}
-	case "null":
-		out = io.Discard
-	case "":
-		// Default case if empty string somehow gets here
-		if core.IsDev() {
-			out = zerolog.ConsoleWriter{
-				Out:        os.Stderr,
-				TimeFormat: time.RFC3339,
-			}
-		} else {
-			out = io.Discard
-		}
-	default:
-		// Assume file path
-		f, err := os.OpenFile(logDest, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error opening log file %s: %v. Falling back to console.\n", logDest, err)
-			out = zerolog.ConsoleWriter{
-				Out:        os.Stderr,
-				TimeFormat: time.RFC3339,
-			}
-		} else {
-			out = f
-		}
-	}
-
-	log.Logger = log.Output(out).With().Caller().Logger()
-}
-
 func main() {
 	initFlags()
 	pflag.Parse()
@@ -229,12 +120,13 @@ func main() {
 		return
 	}
 
+	// Check for updates
 	core.CheckForUpdates()
 
-	// 1. Load the config file (bootstrap for db-path and initial settings)
-	loadConfig()
+	// Load the config file (bootstrap for db-path and initial settings)
+	config.LoadConfig()
 
-	// 2. Unmarshal into typed SysConfig struct
+	// Unmarshal into typed SysConfig struct
 	var sysConfig core.SysConfig
 	if err := viper.Unmarshal(&sysConfig); err != nil {
 		fmt.Fprintf(os.Stderr, "FATAL: Failed to unmarshal system configuration: %v\n", err)
@@ -263,46 +155,17 @@ func main() {
 		}
 	}
 
-	// Check if daemon is already running
-	if resp, err := core.SendDaemonCommand(core.DaemonCommand{Command: core.DaemonCommandStatus}); err == nil {
-		fmt.Printf("%sIHPP is already running.%s\n", core.ColorCyan, core.ColorReset)
+	// Check if daemon is already running and handle proxy merging
+	daemonCheck, err := core.CheckDaemonAndGetNewProxies(sysConfig.Proxies)
+	if err == nil && daemonCheck.IsRunning {
+		fmt.Print(daemonCheck.ResponseMsg)
 
-		// Filter proxies that are NOT already in the daemon
-		var newProxies []core.SysConfigProxyEntry
-		if len(sysConfig.Proxies) > 0 {
-			daemonData, ok := resp.Data.(map[string]any)
-			if ok {
-				daemonProxies, ok := daemonData["proxies"].([]any)
-				if ok {
-					for _, p := range sysConfig.Proxies {
-						isNew := true
-						for _, dpAny := range daemonProxies {
-							dp, ok := dpAny.(map[string]any)
-							if ok {
-								// Match by listen port and target
-								if dp["listen"] == p.Listen && dp["target"] == p.Target {
-									isNew = false
-									break
-								}
-							}
-						}
-						if isNew {
-							newProxies = append(newProxies, p)
-						}
-					}
-				}
-			}
-		}
-
-		if len(newProxies) > 0 {
-			fmt.Printf("%d new/different proxies found. Do you want to merge them into the existing instance? (y/n): ", len(newProxies))
+		if len(daemonCheck.NewProxies) > 0 {
+			fmt.Printf("%d new/different proxies found. Do you want to merge them into the existing instance? (y/n): ", len(daemonCheck.NewProxies))
 			var response string
 			fmt.Scanln(&response)
 			if strings.ToLower(response) == "y" || strings.ToLower(response) == "yes" {
-				resp, err := core.SendDaemonCommand(core.DaemonCommand{
-					Command: core.DaemonCommandMerge,
-					Proxies: newProxies,
-				})
+				resp, err := core.MergeProxiesIntoDaemon(daemonCheck.MergeProxies)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Error merging proxies: %v\n", err)
 					os.Exit(1)
@@ -330,7 +193,7 @@ func main() {
 	}
 	defer core.RemovePIDFile()
 
-	// 3. Initialize database (needed for persistent settings)
+	// Initialize database (needed for persistent settings)
 	// Use resolved settings from config/flags for bootstrap
 	db, err := core.InitDatabase(sysConfig.DBPath)
 	if err != nil {
@@ -338,81 +201,27 @@ func main() {
 		log.Fatal().Err(err).Msg("Database initialization failed")
 	}
 
-	// 4. Load persistent settings from DB, falling back to config file/defaults
-	if !sysConfig.InMemory {
-		sysConfig.LogLevel = core.GetSystemSetting(db, "log_level", sysConfig.LogLevel)
-	}
-	if sysConfig.LogLevel == "" {
-		if core.IsDev() {
-			sysConfig.LogLevel = "debug"
-		} else {
-			sysConfig.LogLevel = core.LogLevelDisabled
-		}
-	}
+	// Load persistent settings from DB, falling back to config file/defaults
+	config.LoadSettingsFromDB(db, &sysConfig)
 
-	if !sysConfig.InMemory {
-		sysConfig.LogDest = core.GetSystemSetting(db, "log_dest", sysConfig.LogDest)
-	}
-	if sysConfig.LogDest == "" {
-		if core.IsDev() {
-			sysConfig.LogDest = "console"
-		} else {
-			sysConfig.LogDest = "null"
-		}
-	}
-
-	// 5. Setup logger and global config early with final settings from DB
+	// Setup logger and global config early with final settings from DB
+	log.Debug().Interface("sysConfig", sysConfig).Msg("System config")
 	core.GlobalVar.SetSysConfig(&sysConfig)
-	setupLogger(sysConfig.LogLevel, sysConfig.LogDest)
 
-	if !sysConfig.InMemory {
-		sysConfig.APIAddr = core.GetSystemSetting(db, "api_addr", sysConfig.APIAddr)
-	}
-	if sysConfig.APIAddr == "" {
-		sysConfig.APIAddr = ":20000"
-	}
-
-	if sysConfig.InMemory {
-		sysConfig.MaxSessionsRetain = 100
-	} else {
-		maxRetainStr := core.GetSystemSetting(db, "max_sessions_retain", "")
-		if maxRetainStr != "" {
-			fmt.Sscanf(maxRetainStr, "%d", &sysConfig.MaxSessionsRetain)
-		}
-	}
-
-	if sysConfig.MaxSessionsRetain <= 0 {
-		sysConfig.MaxSessionsRetain = 10000
-	}
-
-	// Ensure DB is seeded with current values if they are new
-	if !sysConfig.InMemory {
-		_ = core.SetSystemSetting(db, "log_level", sysConfig.LogLevel)
-		_ = core.SetSystemSetting(db, "log_dest", sysConfig.LogDest)
-		_ = core.SetSystemSetting(db, "api_addr", sysConfig.APIAddr)
-		_ = core.SetSystemSetting(db, "max_sessions_retain", fmt.Sprintf("%d", sysConfig.MaxSessionsRetain))
-	}
-
-	// 7. Validate proxy entries
+	// Validate proxy entries
 	if len(sysConfig.Proxies) == 0 {
 		log.Warn().Msg("No [[proxies]] entries found in configuration. Only UI server will be active.")
 	}
 
 	startTime := time.Now()
 
-	// 8. Initialize single shared UI server
-	var uiServer *web.UIServer
-	if db != nil && sysConfig.APIAddr != "" {
+	// Initialize single shared UI server
+	uiServer, err := web.StartUIServer(db, sysConfig.APIAddr)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to start UI server")
+	}
+	if uiServer != nil {
 		fmt.Printf("%sUI Server:%s http://%s\n", core.ColorCyan, core.ColorReset, sysConfig.APIAddr)
-		uiServer = web.NewUIServer(&web.Config{
-			DB:         db,
-			ListenAddr: sysConfig.APIAddr,
-		})
-		go func() {
-			if err := uiServer.Start(); err != nil && err != http.ErrServerClosed {
-				log.Warn().Err(err).Msg("UI server error")
-			}
-		}()
 	}
 
 	// Start the reaper
@@ -424,7 +233,7 @@ func main() {
 	reaper := core.NewMaxSessionRowsReaper(db, publishFunc)
 	reaper.Start(5 * time.Minute)
 
-	// 9. Loop through all proxy entries and create corresponding threads
+	// Loop through all proxy entries and create corresponding threads
 	for i, proxyEntry := range sysConfig.Proxies {
 		err := core.StartProxyServer(i, proxyEntry, db, publishFunc)
 		if err != nil {
@@ -433,7 +242,7 @@ func main() {
 		}
 	}
 
-	// 9. Graceful shutdown handler
+	// Graceful shutdown handler
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 

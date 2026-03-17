@@ -258,3 +258,66 @@ func CleanupStaleSocket() {
 	_ = os.Remove(DaemonSocketPath())
 	_ = os.Remove(DaemonPIDPath())
 }
+
+type DaemonCheckResult struct {
+	IsRunning    bool
+	NewProxies   []SysConfigProxyEntry
+	ResponseMsg  string
+	ShouldExit   bool
+	MergeProxies []SysConfigProxyEntry
+}
+
+func CheckDaemonAndGetNewProxies(sysConfigProxies []SysConfigProxyEntry) (*DaemonCheckResult, error) {
+	result := &DaemonCheckResult{}
+
+	resp, err := SendDaemonCommand(DaemonCommand{Command: DaemonCommandStatus})
+	if err != nil {
+		// Daemon not running, proceed with normal startup
+		return result, nil
+	}
+
+	result.IsRunning = true
+	result.ResponseMsg = fmt.Sprintf("%sIHPP is already running.%s\n", ColorCyan, ColorReset)
+
+	// Filter proxies that are NOT already in the daemon
+	if len(sysConfigProxies) > 0 {
+		daemonData, ok := resp.Data.(map[string]any)
+		if ok {
+			daemonProxies, ok := daemonData["proxies"].([]any)
+			if ok {
+				for _, p := range sysConfigProxies {
+					isNew := true
+					for _, dpAny := range daemonProxies {
+						dp, ok := dpAny.(map[string]any)
+						if ok {
+							// Match by listen port and target
+							if dp["listen"] == p.Listen && dp["target"] == p.Target {
+								isNew = false
+								break
+							}
+						}
+					}
+					if isNew {
+						result.NewProxies = append(result.NewProxies, p)
+					}
+				}
+			}
+		}
+	}
+
+	if len(result.NewProxies) > 0 {
+		result.ShouldExit = true
+		result.MergeProxies = result.NewProxies
+	} else {
+		result.ShouldExit = true
+	}
+
+	return result, nil
+}
+
+func MergeProxiesIntoDaemon(proxies []SysConfigProxyEntry) (*DaemonResponse, error) {
+	return SendDaemonCommand(DaemonCommand{
+		Command: DaemonCommandMerge,
+		Proxies: proxies,
+	})
+}

@@ -156,6 +156,26 @@ func (s *UIServer) Start() error {
 	return s.server.ListenAndServe()
 }
 
+// StartUIServer creates and starts a UI server, returning the server instance
+func StartUIServer(db *gorm.DB, listenAddr string) (*UIServer, error) {
+	if db == nil || listenAddr == "" {
+		return nil, nil
+	}
+
+	server := NewUIServer(&Config{
+		DB:         db,
+		ListenAddr: listenAddr,
+	})
+
+	go func() {
+		if err := server.Start(); err != nil && err != http.ErrServerClosed {
+			log.Warn().Err(err).Msg("UI server error")
+		}
+	}()
+
+	return server, nil
+}
+
 // Shutdown gracefully shuts down the UI server
 func (s *UIServer) Shutdown() error {
 	if s.server != nil {

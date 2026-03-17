@@ -1,98 +1,142 @@
-import { useMemo, useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  AdaptiveBodyRenderer,
-  findRenderer,
+	AdaptiveBodyRenderer,
+	findRenderer,
 } from "@/app/_components/body-renderers/registry";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { decompressGzip } from "@/lib/zip-util";
 
 interface BodySectionProps {
-  title: string;
-  body: string;
-  size: number;
-  type: string;
+	title: string;
+	body: string;
+	size: number;
+	type: string;
+	encoding?: string;
 }
 
-export function BodySection({ title, body, size, type }: BodySectionProps) {
-  const [isRaw, setIsRaw] = useState(false);
+export function BodySection({
+	title,
+	body,
+	size,
+	type,
+	encoding,
+}: BodySectionProps) {
+	const [isRaw, setIsRaw] = useState(false);
+	const [decompressed, setDecompressed] = useState<string | null>(null);
 
-  if (!size || size === 0)
-    return (
-      <div>
-        <h3 className="text-sm font-semibold mb-2">{title}</h3>
-        <div className="p-4 rounded-md border border-dashed text-center text-muted-foreground text-sm">
-          No body content ({size} bytes)
-        </div>
-      </div>
-    );
+	useEffect(() => {
+		if (encoding === "gzip") {
+			const binary = atob(body);
+			const buffer = Uint8Array.from(binary, (c) => c.charCodeAt(0)).buffer;
+			decompressGzip(buffer)
+				.then(setDecompressed)
+				.catch(() => setDecompressed(body));
+		} else {
+			setDecompressed(null);
+		}
+	}, [body, encoding]);
 
-  const { content, isBase64Decoded } = (() => {
-    const isBinaryType =
-      type.startsWith("image/") ||
-      type.includes("zip") ||
-      type.includes("application/octet-stream");
+	if (!size || size === 0)
+		return (
+			<div>
+				<h3 className="text-sm font-semibold mb-2">{title}</h3>
+				<div className="p-4 rounded-md border border-dashed text-center text-muted-foreground text-sm">
+					No body content ({size} bytes)
+				</div>
+			</div>
+		);
 
-    if (isBinaryType || typeof body !== "string")
-      return { content: body, isBase64Decoded: false };
-    try {
-      return { content: atob(body), isBase64Decoded: true };
-    } catch {
-      return { content: body, isBase64Decoded: false };
-    }
-  })();
+	const { content, isBase64Decoded, isGzipDecoded } = (() => {
+		if (encoding === "gzip") {
+			return {
+				content: decompressed ?? body,
+				isBase64Decoded: false,
+				isGzipDecoded: decompressed !== null,
+			};
+		}
 
-  // Stable renderer reference — won't cause remount of JER
-  const renderer = findRenderer(type, content);
-  let contentEl = <div></div>;
+		const isBinaryType =
+			type.startsWith("image/") ||
+			type.includes("zip") ||
+			type.includes("application/octet-stream");
 
-  if (renderer && !isRaw) {
-    contentEl = (
-      <AdaptiveBodyRenderer body={content} contentType={renderer.id} />
-    );
-  } else {
-    contentEl = (
-      <pre className="flex-1 text-xs p-4 font-mono whitespace-pre-wrap break-all">
-        {content}
-      </pre>
-    );
-  }
+		if (isBinaryType || typeof body !== "string")
+			return { content: body, isBase64Decoded: false, isGzipDecoded: false };
 
-  return (
-    <div className="flex flex-col min-h-0">
-      <div className="flex items-center justify-between mb-3 flex-shrink-0">
-        <h3 className="text-sm font-semibold">{title}</h3>
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          {renderer && (
-            <div className="flex items-center gap-2">
-              <Label
-                htmlFor="raw-mode"
-                className="text-[10px] uppercase font-bold text-muted-foreground cursor-pointer"
-              >
-                Raw Mode ({renderer.label})
-              </Label>
-              <Switch
-                id="raw-mode"
-                checked={isRaw}
-                onCheckedChange={setIsRaw}
-                size="sm"
-              />
-            </div>
-          )}
-          <div className="flex gap-2">
-            <span>{size} bytes</span>
-            <span>{type}</span>
-            {isBase64Decoded && (
-              <Badge variant="outline" className="text-[10px]">
-                Base64 Decoded
-              </Badge>
-            )}
-          </div>
-        </div>
-      </div>
-      <div className="rounded-md border bg-muted/50 overflow-auto flex-1 min-h-0">
-        {contentEl}
-      </div>
-    </div>
-  );
+		try {
+			return {
+				content: atob(body),
+				isBase64Decoded: true,
+				isGzipDecoded: false,
+			};
+		} catch {
+			return { content: body, isBase64Decoded: false, isGzipDecoded: false };
+		}
+	})();
+
+	const renderer = findRenderer(type, content);
+	let contentEl = <div></div>;
+
+	if (renderer && !isRaw) {
+		contentEl = (
+			<AdaptiveBodyRenderer body={content} contentType={renderer.id} />
+		);
+	} else {
+		contentEl = (
+			<pre className="flex-1 text-xs p-4 font-mono whitespace-pre-wrap break-all">
+				{content}
+			</pre>
+		);
+	}
+
+	return (
+		<div className="flex flex-col min-h-0">
+			<div className="flex items-center justify-between mb-3 flex-shrink-0">
+				<h3 className="text-sm font-semibold">{title}</h3>
+				<div className="flex items-center gap-4 text-xs text-muted-foreground">
+					{renderer && (
+						<div className="flex items-center gap-2">
+							<Label
+								htmlFor="raw-mode"
+								className="text-[10px] uppercase font-bold text-muted-foreground cursor-pointer"
+							>
+								Raw Mode ({renderer.label})
+							</Label>
+							<Switch
+								id="raw-mode"
+								checked={isRaw}
+								onCheckedChange={setIsRaw}
+								size="sm"
+							/>
+						</div>
+					)}
+					<div className="flex gap-2">
+						<span>{size} bytes</span>
+						<span>{type}</span>
+						{isBase64Decoded && (
+							<Badge variant="outline" className="text-[10px]">
+								Base64 Decoded
+							</Badge>
+						)}
+						{isGzipDecoded && (
+							<Badge variant="outline" className="text-[10px]">
+								Gzip Decoded
+							</Badge>
+						)}
+					</div>
+				</div>
+			</div>
+			<div className="rounded-md border bg-muted/50 overflow-auto flex-1 min-h-0">
+				{encoding === "gzip" && decompressed === null ? (
+					<pre className="flex-1 text-xs p-4 font-mono text-muted-foreground">
+						Decompressing…
+					</pre>
+				) : (
+					contentEl
+				)}
+			</div>
+		</div>
+	);
 }
